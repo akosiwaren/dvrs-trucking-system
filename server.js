@@ -4,8 +4,9 @@ const fs = require('fs'); // New: to handle files
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: 'https://dvrss.netlify.app'
+}));app.use(express.json());
 
 const DATA_FILE = './database.json';
 
