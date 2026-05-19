@@ -995,15 +995,15 @@
   async function syncWithBackend() {
     console.log("Sync started");
     try {
-      const response = await fetch(`http://localhost:3000/api/clients?t=${Date.now()}`);
+      const response = await fetch(`https://dvrs-backend.onrender.com/api/clients?t=${Date.now()}`);
       const data = await response.json();
       allClients = data;
       
-      const payResponse = await fetch(`http://localhost:3000/api/payments?t=${Date.now()}`);
+      const payResponse = await fetch(`https://dvrs-backend.onrender.com/api/payments?t=${Date.now()}`);
       const payments = await payResponse.json();
       const paidWaybillIds = new Set(payments.map(p => p.waybill));
       
-      const tripsResponse = await fetch(`http://localhost:3000/api/dispatches?t=${Date.now()}`);
+      const tripsResponse = await fetch(`https://dvrs-backend.onrender.com/api/dispatches?t=${Date.now()}`);
       const dispatches = await tripsResponse.json();
       
       // Dashboard stats
@@ -1111,7 +1111,7 @@
   async function updateDashboardStats() {
     // Maintenance timeline
     try {
-      const maintRes = await fetch('http://localhost:3000/api/maintenance');
+      const maintRes = await fetch('https://dvrs-backend.onrender.com/api/maintenance');
       const records = await maintRes.json();
       document.getElementById('dash-maint').innerText = records.length;
       const maintList = document.getElementById('dash-maint-list');
@@ -1129,8 +1129,8 @@
     // Transaction summary on dashboard
     try {
       const [clients, payments] = await Promise.all([
-        fetch('http://localhost:3000/api/clients').then(r=>r.json()),
-        fetch('http://localhost:3000/api/payments').then(r=>r.json())
+        fetch('https://dvrs-backend.onrender.com/api/clients').then(r=>r.json()),
+        fetch('https://dvrs-backend.onrender.com/api/payments').then(r=>r.json())
       ]);
       const totalCollected = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
       const totalValue = clients.reduce((s,c)=>s+parseFloat(c.amount||0),0);
@@ -1139,7 +1139,7 @@
       document.getElementById('dash-tx-summary').innerText = `${payments.length} transactions · ${clients.length} waybills`;
     } catch(e) {}
   }
-  
+  <!-- updated -->
   async function refreshAllData() {
     await syncWithBackend();
     updateDashboardStats();
@@ -1182,7 +1182,7 @@
       notes: document.getElementById('cl-notes').value
     };
     try {
-      const response = await fetch('http://localhost:3000/api/clients', {
+      const response = await fetch('https://dvrs-backend.onrender.com/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newRequest)
       });
       if (response.ok) {
@@ -1226,7 +1226,7 @@
       postedBy: "Office Staff"
     };
     try {
-      const response = await fetch('http://localhost:3000/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(txData) });
+      const response = await fetch('https://dvrs-backend.onrender.com/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(txData) });
       if (response.ok) {
         alert("✅ Payment Posted!");
         await syncWithBackend();
@@ -1288,7 +1288,7 @@
       createdAt: new Date().toISOString()
     };
     try {
-      const res = await fetch('http://localhost:3000/api/dispatches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dispatchData) });
+      const res = await fetch('https://dvrs-backend.onrender.com/api/dispatches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dispatchData) });
       if(res.ok) { toast("✅ Dispatch issued"); clearDispatchForm(); await loadDispatches(); }
       else toast("Failed", "error");
     } catch(e) { toast("Server error", "error"); }
@@ -1304,7 +1304,7 @@
   
   async function loadDispatches() {
     try {
-      const res = await fetch('http://localhost:3000/api/dispatches');
+      const res = await fetch('https://dvrs-backend.onrender.com/api/dispatches');
       const data = await res.json();
       const table = document.getElementById('dispatch-table');
       const countSpan = document.getElementById('dp-count');
@@ -1356,7 +1356,7 @@
       updatedAt: new Date().toISOString()
     };
     try {
-      const res = await fetch(`http://localhost:3000/api/dispatches/${tripId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
+      const res = await fetch(`https://dvrs-backend.onrender.com/api/dispatches/${tripId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
       if(res.ok) {
         toast("Trip report submitted");
         document.getElementById('tr-trip-id').value = '';
@@ -1380,7 +1380,7 @@
   // ============================================================
   async function loadMaintenanceRecords() {
     try {
-      const res = await fetch('http://localhost:3000/api/maintenance');
+      const res = await fetch('https://dvrs-backend.onrender.com/api/maintenance');
       const records = await res.json();
       const table = document.getElementById('maintenance-table');
       const count = document.getElementById('mt-count');
@@ -1435,7 +1435,7 @@
       status: 'Scheduled', parts:0, labor:0, total:0
     };
     try {
-      const res = await fetch('http://localhost:3000/api/maintenance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await fetch('https://dvrs-backend.onrender.com/api/maintenance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       if(res.ok) {
         toast("Service request sent");
         document.getElementById('mt-req-date').value = '';
@@ -1464,7 +1464,7 @@
       total: (parseFloat(document.getElementById('sr-parts').value)||0) + (parseFloat(document.getElementById('sr-labor').value)||0)
     };
     try {
-      const res = await fetch(`http://localhost:3000/api/maintenance/${ref}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
+      const res = await fetch(`https://dvrs-backend.onrender.com/api/maintenance/${ref}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
       if(res.ok) {
         toast("Service record submitted");
         clearSRForm();
@@ -1481,7 +1481,7 @@
   async function deleteMaintRecord(id) {
     if(!confirm("Delete record?")) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/maintenance/${id}`, { method: 'DELETE' });
+      const res = await fetch(`https://dvrs-backend.onrender.com/api/maintenance/${id}`, { method: 'DELETE' });
       if(res.ok) { toast("Deleted"); await loadMaintenanceRecords(); }
       else toast("Failed", "error");
     } catch(e) { toast("Error", "error"); }
@@ -1493,10 +1493,10 @@
   async function refreshReportStats() {
     try {
       const [clients, payments, dispatches, maintenance] = await Promise.all([
-        fetch('http://localhost:3000/api/clients').then(r=>r.json()),
-        fetch('http://localhost:3000/api/payments').then(r=>r.json()),
-        fetch('http://localhost:3000/api/dispatches').then(r=>r.json()),
-        fetch('http://localhost:3000/api/maintenance').then(r=>r.json())
+        fetch('https://dvrs-backend.onrender.com/api/clients').then(r=>r.json()),
+        fetch('https://dvrs-backend.onrender.com/api/payments').then(r=>r.json()),
+        fetch('https://dvrs-backend.onrender.com/api/dispatches').then(r=>r.json()),
+        fetch('https://dvrs-backend.onrender.com/api/maintenance').then(r=>r.json())
       ]);
       const revenue = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
       const maintCost = maintenance.reduce((s,m)=>s+(m.total||0),0);
@@ -1523,10 +1523,10 @@ async function viewReport(type) {
   
   try {
     const [clients, payments, dispatches, maintenance] = await Promise.all([
-      fetch('http://localhost:3000/api/clients').then(r=>r.json()),
-      fetch('http://localhost:3000/api/payments').then(r=>r.json()),
-      fetch('http://localhost:3000/api/dispatches').then(r=>r.json()),
-      fetch('http://localhost:3000/api/maintenance').then(r=>r.json())
+      fetch('https://dvrs-backend.onrender.com/api/clients').then(r=>r.json()),
+      fetch('https://dvrs-backend.onrender.com/api/payments').then(r=>r.json()),
+      fetch('https://dvrs-backend.onrender.com/api/dispatches').then(r=>r.json()),
+      fetch('https://dvrs-backend.onrender.com/api/maintenance').then(r=>r.json())
     ]);
     
     // Helper: one‑line summary block (flex row)
@@ -1641,10 +1641,10 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
   try {
     // Fetch fresh data
     const [clientsRes, paymentsRes, dispatchesRes, maintenanceRes] = await Promise.all([
-      fetch('http://localhost:3000/api/clients'),
-      fetch('http://localhost:3000/api/payments'),
-      fetch('http://localhost:3000/api/dispatches'),
-      fetch('http://localhost:3000/api/maintenance')
+      fetch('https://dvrs-backend.onrender.com/api/clients'),
+      fetch('https://dvrs-backend.onrender.com/api/payments'),
+      fetch('https://dvrs-backend.onrender.com/api/dispatches'),
+      fetch('https://dvrs-backend.onrender.com/api/maintenance')
     ]);
 
     let clients = await clientsRes.json();
@@ -1765,10 +1765,10 @@ async function generateCustomReport() {
   if (outputFormat === 'CSV (copy)') {
     try {
       const [clientsRes, paymentsRes, dispatchesRes, maintenanceRes] = await Promise.all([
-        fetch('http://localhost:3000/api/clients'),
-        fetch('http://localhost:3000/api/payments'),
-        fetch('http://localhost:3000/api/dispatches'),
-        fetch('http://localhost:3000/api/maintenance')
+        fetch('https://dvrs-backend.onrender.com/api/clients'),
+        fetch('https://dvrs-backend.onrender.com/api/payments'),
+        fetch('https://dvrs-backend.onrender.com/api/dispatches'),
+        fetch('https://dvrs-backend.onrender.com/api/maintenance')
       ]);
 
       let clients = await clientsRes.json();
