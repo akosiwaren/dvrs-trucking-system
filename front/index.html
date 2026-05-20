@@ -1125,32 +1125,33 @@
     }
   }
 
-  function viewWaybill(waybillId) {
-  const client = allClients.find(c => c.id === waybillId);
-  if (!client) {
-    toast('Waybill not found', 'error');
-    return;
+    function viewWaybill(waybillId) {
+        console.log('viewWaybill called with ID:', waybillId);
+    const client = allClients.find(c => c.id === waybillId);
+    if (!client) {
+      toast('Waybill not found', 'error');
+      return;
+    }
+    
+    const modalBody = document.getElementById('waybill-modal-body');
+    modalBody.innerHTML = `
+      <div class="waybill-detail">
+        <div><strong>Waybill ID:</strong> ${client.id}</div>
+        <div><strong>Client:</strong> ${client.client}</div>
+        <div><strong>Service:</strong> ${client.service}</div>
+        <div><strong>Route:</strong> ${client.origin || '?'} → ${client.dest || '?'}</div>
+        <div><strong>Date:</strong> ${client.date || '—'}</div>
+        <div><strong>Amount:</strong> ${fmt(client.amount)}</div>
+        <div><strong>Status:</strong> ${badgeForStatus(client.status)}</div>
+        <div><strong>Notes:</strong> ${client.notes || '—'}</div>
+      </div>
+    `;
+    document.getElementById('waybill-modal').classList.add('open');
   }
-  
-  const modalBody = document.getElementById('waybill-modal-body');
-  modalBody.innerHTML = `
-    <div class="waybill-detail">
-      <div><strong>Waybill ID:</strong> ${client.id}</div>
-      <div><strong>Client:</strong> ${client.client}</div>
-      <div><strong>Service:</strong> ${client.service}</div>
-      <div><strong>Route:</strong> ${client.origin || '?'} → ${client.dest || '?'}</div>
-      <div><strong>Date:</strong> ${client.date || '—'}</div>
-      <div><strong>Amount:</strong> ${fmt(client.amount)}</div>
-      <div><strong>Status:</strong> ${badgeForStatus(client.status)}</div>
-      <div><strong>Notes:</strong> ${client.notes || '—'}</div>
-    </div>
-  `;
-  document.getElementById('waybill-modal').classList.add('open');
-}
 
-function closeWaybillModal() {
-  document.getElementById('waybill-modal').classList.remove('open');
-}
+  function closeWaybillModal() {
+    document.getElementById('waybill-modal').classList.remove('open');
+  }
   
   async function updateDashboardStats() {
     // Maintenance timeline
