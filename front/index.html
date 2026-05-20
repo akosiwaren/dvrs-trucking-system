@@ -1185,19 +1185,19 @@
       
     } catch (err) {
       console.error("Sync error:", err);
-    }
+  }
+}
+
+function printReceipt() {
+  const receiptContent = document.getElementById('receipt-content');
+  if (!receiptContent) {
+    toast('Receipt content not found', 'error');
+    return;
   }
 
-    function viewWaybill(waybillId) {
-        console.log('viewWaybill called with ID:', waybillId);
-    const client = allClients.find(c => c.id === waybillId);
-    if (!client) {
-      toast('Waybill not found', 'error');
-      return;
-    }
-
-    function printReceipt() {
-  const receiptContent = document.getElementById('receipt-content').cloneNode(true);
+  // Clone the receipt content so we don’t modify the original
+  const clone = receiptContent.cloneNode(true);
+  
   // Create a hidden iframe
   const iframe = document.createElement('iframe');
   iframe.style.position = 'absolute';
@@ -1208,48 +1208,113 @@
   
   const iframeDoc = iframe.contentWindow.document;
   iframeDoc.open();
-  // Write minimal HTML without explicit DOCTYPE (browser will add it)
   iframeDoc.write(`
+    <!DOCTYPE html>
     <html>
     <head>
-      <title>Receipt</title>
+      <title>DVRS Receipt</title>
       <style>
-        body { font-family: monospace; padding: 20px; }
-        .receipt-header { text-align: center; margin-bottom: 20px; }
-        .receipt-details div { margin: 5px 0; }
-        .receipt-footer { margin-top: 20px; text-align: center; }
+        body {
+          font-family: 'Courier New', monospace;
+          padding: 20px;
+          margin: 0;
+        }
+        .receipt-header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 1px dashed #ccc;
+          padding-bottom: 10px;
+        }
+        .receipt-header h2 {
+          margin: 0;
+          color: #D85A30;
+        }
+        .receipt-details div {
+          margin: 5px 0;
+        }
+        .receipt-footer {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 11px;
+          color: #666;
+          border-top: 1px dashed #ccc;
+          padding-top: 10px;
+        }
       </style>
     </head>
-    <body>${receiptContent.outerHTML}</body>
+    <body>${clone.outerHTML}</body>
     </html>
   `);
   iframeDoc.close();
   
-  // Wait for content to render, then print
+  // Wait for content to render
   iframe.contentWindow.focus();
   iframe.contentWindow.print();
   
-  // Remove iframe after printing (or delay a bit)
+  // Remove the iframe after printing (or after a short delay)
   setTimeout(() => {
     document.body.removeChild(iframe);
   }, 1000);
 }
-    
-    const modalBody = document.getElementById('waybill-modal-body');
-    modalBody.innerHTML = `
-      <div class="waybill-detail">
-        <div><strong>Waybill ID:</strong> ${client.id}</div>
-        <div><strong>Client:</strong> ${client.client}</div>
-        <div><strong>Service:</strong> ${client.service}</div>
-        <div><strong>Route:</strong> ${client.origin || '?'} → ${client.dest || '?'}</div>
-        <div><strong>Date:</strong> ${client.date || '—'}</div>
-        <div><strong>Amount:</strong> ${fmt(client.amount)}</div>
-        <div><strong>Status:</strong> ${badgeForStatus(client.status)}</div>
-        <div><strong>Notes:</strong> ${client.notes || '—'}</div>
-      </div>
-    `;
-    document.getElementById('waybill-modal').classList.add('open');
+
+function showReceipt(txId) {
+  const transaction = allPayments.find(p => p.txId === txId);
+  if (!transaction) {
+    toast('Transaction not found', 'error');
+    return;
   }
+  const client = allClients.find(c => c.id === transaction.waybill);
+  const clientName = client ? client.client : '—';
+  
+  const modalBody = document.getElementById('receipt-modal-body');
+  modalBody.innerHTML = `
+    <div class="receipt" id="receipt-content">
+      <div class="receipt-header">
+        <h2>DVRS Trucking Services</h2>
+        <p>Official Payment Receipt</p>
+      </div>
+      <div class="receipt-details">
+        <div><strong>Receipt No:</strong> ${transaction.txId}</div>
+        <div><strong>Date:</strong> ${transaction.date}</div>
+        <div><strong>Waybill ID:</strong> ${transaction.waybill}</div>
+        <div><strong>Client:</strong> ${clientName}</div>
+        <div><strong>Amount Paid:</strong> ${fmt(transaction.amount)}</div>
+        <div><strong>Payment Method:</strong> ${transaction.method}</div>
+        <div><strong>Remarks:</strong> ${transaction.remarks || '—'}</div>
+        <div><strong>Processed by:</strong> ${transaction.postedBy || 'Office Staff'}</div>
+      </div>
+      <div class="receipt-footer">
+        Thank you for your payment.<br>
+        This is a computer-generated receipt.
+      </div>
+    </div>
+  `;
+  document.getElementById('receipt-modal').classList.add('open');
+}
+
+function viewWaybill(waybillId) {
+  console.log('viewWaybill called with ID:', waybillId);
+  const client = allClients.find(c => c.id === waybillId);
+  if (!client) {
+    toast('Waybill not found', 'error');
+    return;
+  }
+  
+  const modalBody = document.getElementById('waybill-modal-body');
+  modalBody.innerHTML = `
+    <div class="waybill-detail">
+      <div><strong>Waybill ID:</strong> ${client.id}</div>
+      <div><strong>Client:</strong> ${client.client}</div>
+      <div><strong>Service:</strong> ${client.service}</div>
+      <div><strong>Route:</strong> ${client.origin || '?'} → ${client.dest || '?'}</div>
+      <div><strong>Date:</strong> ${client.date || '—'}</div>
+      <div><strong>Amount:</strong> ${fmt(client.amount)}</div>
+      <div><strong>Status:</strong> ${badgeForStatus(client.status)}</div>
+      <div><strong>Notes:</strong> ${client.notes || '—'}</div>
+    </div>
+  `;
+  document.getElementById('waybill-modal').classList.add('open');
+}
 
   function closeWaybillModal() {
     document.getElementById('waybill-modal').classList.remove('open');
@@ -2057,6 +2122,7 @@ async function generateCustomReport() {
   window.viewTripDetails = (id) => toast(`Trip ${id} details`, 'info');
   window.closeWaybillModal = closeWaybillModal;
   window.closeTripModal = closeTripModal;
+  window.showReceipt = showReceipt;
   window.closeReceiptModal = closeReceiptModal;
   window.printReceipt = printReceipt;
   window.deleteMaintRecord = deleteMaintRecord;
