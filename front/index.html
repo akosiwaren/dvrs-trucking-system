@@ -206,6 +206,12 @@
   .rp-sum-label { font-size: 10.5px; color: var(--text-tertiary); }
   .rp-sum-val { font-size: 18px; font-weight: 600; color: var(--text); }
 
+  .trip-detail > div {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
   /* EMPTY STATE */
   .empty-state { text-align: center; padding: 32px; color: var(--text-tertiary); font-size: 12.5px; }
   .empty-state svg { margin-bottom: 10px; opacity: 0.3; }
@@ -934,8 +940,20 @@
   </div>
 </div>
 
+<!-- TRIP DETAIL MODAL -->
+<div class="modal-overlay" id="trip-modal">
+  <div class="modal" style="max-width: 500px;">
+    <div class="modal-title">
+      <span>Trip Details</span>
+      <span class="modal-close no-print" onclick="closeTripModal()">✕</span>
+    </div>
+    <div id="trip-modal-body"></div>
+  </div>
+</div>
+
 <script>
   let allClients = [];
+  let allDispatches = [];
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -1351,6 +1369,7 @@
     try {
       const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
       const data = await res.json();
+      allDispatches = data; // Store globally
       const table = document.getElementById('dispatch-table');
       const countSpan = document.getElementById('dp-count');
       if(countSpan) countSpan.innerText = data.length;
@@ -1557,7 +1576,39 @@
 }
 
 function viewTrip(tripId) {
-  toast(`Viewing details for trip ${tripId}`, "info");
+  console.log('viewTrip called with ID:', tripId);
+  const trip = allDispatches.find(t => t.tripId === tripId);
+  if (!trip) {
+    toast('Trip not found', 'error');
+    return;
+  }
+
+  // Find client name from waybill
+  const client = allClients.find(c => c.id === trip.waybillId);
+  const clientName = client ? client.client : '—';
+
+  const modalBody = document.getElementById('trip-modal-body');
+  modalBody.innerHTML = `
+    <div class="trip-detail">
+      <div><strong>Trip ID:</strong> ${trip.tripId}</div>
+      <div><strong>Waybill:</strong> ${trip.waybillId}</div>
+      <div><strong>Client:</strong> ${clientName}</div>
+      <div><strong>Driver:</strong> ${trip.driver}</div>
+      <div><strong>Truck:</strong> ${trip.truck}</div>
+      <div><strong>Route:</strong> ${trip.origin || '?'} → ${trip.destination || '?'}</div>
+      <div><strong>Dispatch Date:</strong> ${trip.date}</div>
+      <div><strong>Status:</strong> ${getStatusBadge(trip.status)}</div>
+      <div><strong>Notes:</strong> ${trip.notes || '—'}</div>
+      <div><strong>Departure Time:</strong> ${trip.departureTime || '—'}</div>
+      <div><strong>Arrival Time:</strong> ${trip.arrivalTime || '—'}</div>
+      <div><strong>Trip Notes:</strong> ${trip.tripNotes || '—'}</div>
+    </div>
+  `;
+  document.getElementById('trip-modal').classList.add('open');
+}
+
+function closeTripModal() {
+  document.getElementById('trip-modal').classList.remove('open');
 }
   
 async function viewReport(type) {
@@ -1921,6 +1972,7 @@ async function generateCustomReport() {
   window.closeDeleteModal = closeDeleteModal;
   window.viewTripDetails = (id) => toast(`Trip ${id} details`, 'info');
   window.closeWaybillModal = closeWaybillModal;
+  window.closeTripModal = closeTripModal;
   window.deleteMaintRecord = deleteMaintRecord;
 </script>
 </body>
