@@ -190,6 +190,12 @@
   .modal-close { cursor: pointer; color: var(--text-tertiary); font-size: 18px; line-height: 1; }
   .modal-close:hover { color: var(--text); }
 
+.waybill-detail > div {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
   /* REPORT PREVIEW */
   .report-preview { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; font-size: 12px; }
   .report-preview h2 { font-size: 15px; margin-bottom: 4px; color: var(--brand); }
@@ -917,6 +923,17 @@
   </div>
 </div>
 
+<!-- WAYBILL DETAIL MODAL -->
+<div class="modal-overlay" id="waybill-modal">
+  <div class="modal" style="max-width: 500px;">
+    <div class="modal-title">
+      <span>Waybill Details</span>
+      <span class="modal-close no-print" onclick="closeWaybillModal()">✕</span>
+    </div>
+    <div id="waybill-modal-body"></div>
+  </div>
+</div>
+
 <script>
   let allClients = [];
 
@@ -1107,6 +1124,33 @@
       console.error("Sync error:", err);
     }
   }
+
+  function viewWaybill(waybillId) {
+  const client = allClients.find(c => c.id === waybillId);
+  if (!client) {
+    toast('Waybill not found', 'error');
+    return;
+  }
+  
+  const modalBody = document.getElementById('waybill-modal-body');
+  modalBody.innerHTML = `
+    <div class="waybill-detail">
+      <div><strong>Waybill ID:</strong> ${client.id}</div>
+      <div><strong>Client:</strong> ${client.client}</div>
+      <div><strong>Service:</strong> ${client.service}</div>
+      <div><strong>Route:</strong> ${client.origin || '?'} → ${client.dest || '?'}</div>
+      <div><strong>Date:</strong> ${client.date || '—'}</div>
+      <div><strong>Amount:</strong> ${fmt(client.amount)}</div>
+      <div><strong>Status:</strong> ${badgeForStatus(client.status)}</div>
+      <div><strong>Notes:</strong> ${client.notes || '—'}</div>
+    </div>
+  `;
+  document.getElementById('waybill-modal').classList.add('open');
+}
+
+function closeWaybillModal() {
+  document.getElementById('waybill-modal').classList.remove('open');
+}
   
   async function updateDashboardStats() {
     // Maintenance timeline
