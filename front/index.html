@@ -987,7 +987,7 @@
       <span>Payment Receipt</span>
       <div>
         <button class="btn btn-sm btn-primary" onclick="printReceipt()">🖨 Print</button>
-        <span class="modal-close no-print" onclick="closeReceiptModal()">✕</span>
+        <span class="modal-close no-print" data-close="receipt-modal">✕</span>
       </div>
     </div>
     <div id="receipt-modal-body"></div>
@@ -2086,19 +2086,28 @@ async function generateCustomReport() {
   // ============================================================
   document.querySelectorAll('input[type=date]').forEach(el => { if(!el.value) el.value = today(); });
   
-  window.addEventListener('DOMContentLoaded', async () => {
-    console.log("Initializing...");
-    await syncWithBackend();
-    await loadDispatches();
-    await loadMaintenanceRecords();
-    await updateDashboardStats();
-    const dispatchWaybill = document.getElementById('dp-waybill');
-    if(dispatchWaybill) dispatchWaybill.addEventListener('change', autoFillDispatchFields);
-    const txWaybill = document.getElementById('tx-waybill');
-    if(txWaybill) txWaybill.addEventListener('change', autoFillAmount);
-    console.log("Ready");
+window.addEventListener('DOMContentLoaded', async () => {
+  console.log("Initializing...");
+  await syncWithBackend();
+  await loadDispatches();
+  await loadMaintenanceRecords();
+  await updateDashboardStats();
+  const dispatchWaybill = document.getElementById('dp-waybill');
+  if(dispatchWaybill) dispatchWaybill.addEventListener('change', autoFillDispatchFields);
+  const txWaybill = document.getElementById('tx-waybill');
+  if(txWaybill) txWaybill.addEventListener('change', autoFillAmount);
+  console.log("Ready");
+
+  // ===== UNIVERSAL MODAL CLOSE HANDLER =====
+  document.addEventListener('click', function(e) {
+    const closeBtn = e.target.closest('[data-close]');
+    if (closeBtn) {
+      const modalId = closeBtn.getAttribute('data-close');
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('open');
+    }
   });
-  
+});
   // Expose functions to global scope for onclick handlers
   window.showScreen = showScreen;
   window.handleExport = handleExport;
