@@ -212,6 +212,35 @@
   border-bottom: 1px solid var(--border-light);
 }
 
+.receipt {
+  font-family: monospace;
+  padding: 20px;
+}
+.receipt-header {
+  text-align: center;
+  margin-bottom: 20px;
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 10px;
+}
+.receipt-header h2 {
+  margin: 0;
+  color: var(--brand);
+}
+.receipt-details {
+  margin: 15px 0;
+}
+.receipt-details div {
+  margin: 5px 0;
+}
+.receipt-footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 11px;
+  color: #666;
+  border-top: 1px dashed #ccc;
+  padding-top: 10px;
+}
+
   /* EMPTY STATE */
   .empty-state { text-align: center; padding: 32px; color: var(--text-tertiary); font-size: 12.5px; }
   .empty-state svg { margin-bottom: 10px; opacity: 0.3; }
@@ -951,9 +980,24 @@
   </div>
 </div>
 
+<!-- RECEIPT MODAL -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal" style="max-width: 500px;">
+    <div class="modal-title">
+      <span>Payment Receipt</span>
+      <div>
+        <button class="btn btn-sm btn-primary" onclick="printReceipt()">🖨 Print</button>
+        <span class="modal-close no-print" onclick="closeReceiptModal()">✕</span>
+      </div>
+    </div>
+    <div id="receipt-modal-body"></div>
+  </div>
+</div>
+
 <script>
   let allClients = [];
   let allDispatches = [];
+  let allPayments = [];
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -1036,6 +1080,7 @@
       
       const payResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/payments?t=${Date.now()}`);
       const payments = await payResponse.json();
+      allPayments = payments; // <-- add this line
       const paidWaybillIds = new Set(payments.map(p => p.waybill));
       
       const tripsResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches?t=${Date.now()}`);
@@ -1118,7 +1163,7 @@
               <td>${p.date}</td>
               <td>${p.remarks||'—'}</td>
               <td>${p.postedBy||'Office'}</td>
-              <td><button class="btn-sm">Receipt</button></td>
+              <td><button class="btn-sm" onclick="showReceipt('${p.txId}')">Receipt</button></td>
             </tr>`;
           }).join('');
         }
@@ -1150,6 +1195,45 @@
       toast('Waybill not found', 'error');
       return;
     }
+
+    function printReceipt() {
+  const receiptContent = document.getElementById('receipt-content').cloneNode(true);
+  // Create a hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+  
+  const iframeDoc = iframe.contentWindow.document;
+  iframeDoc.open();
+  // Write minimal HTML without explicit DOCTYPE (browser will add it)
+  iframeDoc.write(`
+    <html>
+    <head>
+      <title>Receipt</title>
+      <style>
+        body { font-family: monospace; padding: 20px; }
+        .receipt-header { text-align: center; margin-bottom: 20px; }
+        .receipt-details div { margin: 5px 0; }
+        .receipt-footer { margin-top: 20px; text-align: center; }
+      </style>
+    </head>
+    <body>${receiptContent.outerHTML}</body>
+    </html>
+  `);
+  iframeDoc.close();
+  
+  // Wait for content to render, then print
+  iframe.contentWindow.focus();
+  iframe.contentWindow.print();
+  
+  // Remove iframe after printing (or delay a bit)
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 1000);
+}
     
     const modalBody = document.getElementById('waybill-modal-body');
     modalBody.innerHTML = `
@@ -1973,6 +2057,8 @@ async function generateCustomReport() {
   window.viewTripDetails = (id) => toast(`Trip ${id} details`, 'info');
   window.closeWaybillModal = closeWaybillModal;
   window.closeTripModal = closeTripModal;
+  window.closeReceiptModal = closeReceiptModal;
+  window.printReceipt = printReceipt;
   window.deleteMaintRecord = deleteMaintRecord;
 </script>
 </body>
