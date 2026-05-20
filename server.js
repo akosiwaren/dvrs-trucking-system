@@ -1,204 +1,283 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs'); // New: to handle files
+const { Pool } = require('pg');
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'https://dvrss.netlify.app'
-}));app.use(express.json());
+  origin: 'https://dvrss.netlify.app' // or use '*' for development
+}));
+app.use(express.json());
 
-const DATA_FILE = './database.json';
-
-// Function to save data to a file
-const saveToFile = (data) => {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-};
-
-// Function to load data from a file
-const loadFromFile = () => {
-    if (fs.existsSync(DATA_FILE)) {
-        return JSON.parse(fs.readFileSync(DATA_FILE));
-    }
-return { clients: [], payments: [], dispatches: [] };};
-
-// Ensure your initial data has a dispatches array
-let dvrsData = loadFromFile();
-if (!dvrsData.dispatches) dvrsData.dispatches = [];
-
-// This tells the server how to handle NEW client requests
-app.post('/api/clients', (req, res) => {
-    console.log("Received a new client request:", req.body);
-    
-    const db = loadFromFile();
-    
-    // Ensure the clients array exists in your JSON
-    if (!db.clients) {
-        db.clients = [];
-    }
-
-    const newRequest = req.body;
-    
-    // Add the new request to our list
-    db.clients.push(newRequest);
-    
-    // Save the updated list back to database.json
-    saveToFile(db);
-    
-    console.log("Client request saved successfully!");
-    res.status(201).json(newRequest);
+// ===== PostgreSQL CONNECTION =====
+// Render provides the DATABASE_URL environment variable automatically.
+// For local testing, you can set it manually or use a local PostgreSQL instance.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/dvrsdb',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// New route to save Dispatches
-app.post('/api/dispatches', (req, res) => {
-    console.log("POST request received at /api/dispatches"); // 1. Check your terminal for this
-    const db = loadFromFile();
-    
-    // Ensure the dispatches array exists
-    if (!db.dispatches) db.dispatches = [];
+// ===== CREATE TABLES IF NOT EXISTS =====
+async function initTables() {
+  const client = await pool.connect();
+  try {
+    // Clients table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        client TEXT,
+        service TEXT,
+        date TEXT,
+        origin TEXT,
+        dest TEXT,
+        amount NUMERIC,
+        status TEXT,
+        notes TEXT,
+        contact TEXT
+      )
+    `);
+    // Payments table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        txid TEXT PRIMARY KEY,
+        waybill TEXT,
+        amount NUMERIC,
+        method TEXT,
+        date TEXT,
+        remarks TEXT,
+        postedby TEXT
+      )
+    `);
+    // Dispatches table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dispatches (
+        tripid TEXT PRIMARY KEY,
+        waybillid TEXT,
+        driver TEXT,
+        truck TEXT,
+        origin TEXT,
+        destination TEXT,
+        date TEXT,
+        status TEXT,
+        notes TEXT,
+        clientname TEXT,
+        departuretime TEXT,
+        arrivaltime TEXT,
+        tripnotes TEXT
+      )
+    `);
+    // Maintenance table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS maintenance (
+        id TEXT PRIMARY KEY,
+        truck TEXT,
+        type TEXT,
+        reqdate TEXT,
+        priority TEXT,
+        provider TEXT,
+        estcost NUMERIC,
+        description TEXT,
+        status TEXT,
+        parts NUMERIC,
+        labor NUMERIC,
+        total NUMERIC,
+        completeddate TEXT,
+        workdone TEXT
+      )
+    `);
+    console.log("Tables created/verified.");
+  } catch (err) {
+    console.error("Error creating tables:", err);
+  } finally {
+    client.release();
+  }
+}
+initTables();
 
-    const newDispatch = req.body;
-    newDispatch.tripId = "TRP-" + Math.floor(1000 + Math.random() * 9000);
-    
-    console.log("Data to save:", newDispatch); // 2. Check your terminal for this
-    
-    db.dispatches.push(newDispatch);
-    saveToFile(db);
-    
-    res.status(201).json(newDispatch);
+// ===== HELPER FUNCTIONS (optional, for compatibility) =====
+// Not strictly needed, but kept for any remaining JSON logic.
+
+// ===== CLIENTS ENDPOINTS =====
+app.get('/api/clients', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM clients ORDER BY date DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Route to POST a new payment
-app.post('/api/payments', (req, res) => {
-    const db = loadFromFile();
-    if (!db.payments) db.payments = [];
-    db.payments.push(req.body);
-    saveToFile(db);
+app.post('/api/clients', async (req, res) => {
+  const { id, client, service, date, origin, dest, amount, status, notes, contact } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO clients (id, client, service, date, origin, dest, amount, status, notes, contact)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [id, client, service, date, origin, dest, amount, status, notes, contact || '']
+    );
     res.status(201).json(req.body);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/maintenance', (req, res) => {
-    const db = loadFromFile();
-    if (!db.maintenance) db.maintenance = [];
-    const newRecord = req.body;
-    db.maintenance.push(newRecord);
-    saveToFile(db);
-    res.status(201).json(newRecord);
+app.put('/api/clients/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  try {
+    const setClause = Object.keys(updates).map((key, idx) => `${key}=$${idx+2}`).join(',');
+    const values = [id, ...Object.values(updates)];
+    await pool.query(`UPDATE clients SET ${setClause} WHERE id=$1`, values);
+    res.json({ message: 'Updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/api/maintenance', (req, res) => {
-    const db = loadFromFile();
-    if (!db.maintenance) db.maintenance = [];
-    res.json(db.maintenance);
-});
-
-
-// Route to get Dispatches
-app.get('/api/dispatches', (req, res) => {
-    const db = loadFromFile();
-    res.json(db.dispatches || []);
-});
-// This tells the server how to handle the GET request for clients
-app.get('/api/clients', (req, res) => {
-    // Force the server to read the file NOW
-    const db = loadFromFile(); 
-    
-    if (db && db.clients) {
-        res.json(db.clients);
-    } else {
-        res.json([]); 
-    }
-});
-
-// Route to GET all payments
-app.get('/api/payments', (req, res) => {
-    // Force the server to read the file NOW
-    const db = loadFromFile();
-    res.json(db.payments || []);
-});
-
-// PUT update maintenance record
-app.put('/api/maintenance/:id', (req, res) => {
-    const db = loadFromFile();
-    const recordId = req.params.id;
-    const updateData = req.body;
-    
-    const index = db.maintenance.findIndex(m => m.id === recordId);
-    if (index !== -1) {
-        db.maintenance[index] = { ...db.maintenance[index], ...updateData };
-        saveToFile(db);
-        res.json(db.maintenance[index]);
-    } else {
-        res.status(404).json({ error: 'Record not found' });
-    }
-});
-
-app.put('/api/clients/:id', (req, res) => {
-    const db = loadFromFile();
-    const index = db.clients.findIndex(c => c.id === req.params.id);
-    if (index !== -1) {
-        db.clients[index] = { ...db.clients[index], ...req.body };
-        saveToFile(db);
-        res.json(db.clients[index]);
-    } else {
-        res.status(404).json({ error: 'Not found' });
-    }
-});
-
-app.delete('/api/clients/:id', (req, res) => {
-    const db = loadFromFile();
-    db.clients = db.clients.filter(c => c.id !== req.params.id);
-    saveToFile(db);
+app.delete('/api/clients/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM clients WHERE id=$1', [id]);
     res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Update dispatch status (for trip reports)
-app.put('/api/dispatches/:tripId', (req, res) => {
-    console.log("PUT request received for trip:", req.params.tripId);
-    const db = loadFromFile();
-    const tripId = req.params.tripId;
-    const updateData = req.body;
-    
-    // Find the dispatch by tripId
-    const index = db.dispatches.findIndex(d => d.tripId === tripId);
-    
-    if (index !== -1) {
-        // Update the dispatch with new data
-        db.dispatches[index] = { ...db.dispatches[index], ...updateData };
-        saveToFile(db);
-        console.log("Trip updated:", db.dispatches[index]);
-        res.json(db.dispatches[index]);
-    } else {
-        res.status(404).json({ error: 'Trip not found' });
-    }
+// ===== PAYMENTS ENDPOINTS =====
+app.get('/api/payments', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM payments ORDER BY date DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Delete a dispatch
-app.delete('/api/dispatches/:tripId', (req, res) => {
-    console.log("DELETE request received for trip:", req.params.tripId);
-    const db = loadFromFile();
-    const tripId = req.params.tripId;
-    
-    const initialLength = db.dispatches.length;
-    db.dispatches = db.dispatches.filter(d => d.tripId !== tripId);
-    
-    if (db.dispatches.length < initialLength) {
-        saveToFile(db);
-        res.json({ message: 'Trip deleted successfully' });
-    } else {
-        res.status(404).json({ error: 'Trip not found' });
-    }
+app.post('/api/payments', async (req, res) => {
+  const { txId, waybill, amount, method, date, remarks, postedBy } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO payments (txid, waybill, amount, method, date, remarks, postedby)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [txId, waybill, amount, method, date, remarks, postedBy]
+    );
+    res.status(201).json(req.body);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// DELETE maintenance record
-app.delete('/api/maintenance/:id', (req, res) => {
-    const db = loadFromFile();
-    const recordId = req.params.id;
-    db.maintenance = db.maintenance.filter(m => m.id !== recordId);
-    saveToFile(db);
+// ===== DISPATCHES ENDPOINTS =====
+app.get('/api/dispatches', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM dispatches ORDER BY date DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/dispatches', async (req, res) => {
+  const { tripId, waybillId, driver, truck, origin, destination, date, status, notes, clientName, departureTime, arrivalTime, tripNotes } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO dispatches (tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [tripId, waybillId, driver, truck, origin, destination, date, status, notes, clientName, departureTime, arrivalTime, tripNotes]
+    );
+    res.status(201).json(req.body);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/dispatches/:tripId', async (req, res) => {
+  const { tripId } = req.params;
+  const updates = req.body;
+  try {
+    const setClause = Object.keys(updates).map((key, idx) => `${key}=$${idx+2}`).join(',');
+    const values = [tripId, ...Object.values(updates)];
+    await pool.query(`UPDATE dispatches SET ${setClause} WHERE tripid=$1`, values);
+    res.json({ message: 'Updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/dispatches/:tripId', async (req, res) => {
+  const { tripId } = req.params;
+  try {
+    await pool.query('DELETE FROM dispatches WHERE tripid=$1', [tripId]);
     res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.listen(PORT, () => {
-    console.log(`Warehouse Server is running on http://localhost:${PORT}`);
+// ===== MAINTENANCE ENDPOINTS =====
+app.get('/api/maintenance', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM maintenance ORDER BY reqdate DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/maintenance', async (req, res) => {
+  const { id, truck, type, reqDate, priority, provider, estCost, description, status, parts, labor, total, completedDate, workDone } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO maintenance (id, truck, type, reqdate, priority, provider, estcost, description, status, parts, labor, total, completeddate, workdone)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [id, truck, type, reqDate, priority, provider, estCost, description, status, parts || 0, labor || 0, total || 0, completedDate, workDone]
+    );
+    res.status(201).json(req.body);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/maintenance/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  try {
+    const setClause = Object.keys(updates).map((key, idx) => `${key}=$${idx+2}`).join(',');
+    const values = [id, ...Object.values(updates)];
+    await pool.query(`UPDATE maintenance SET ${setClause} WHERE id=$1`, values);
+    res.json({ message: 'Updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/maintenance/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM maintenance WHERE id=$1', [id]);
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== START SERVER =====
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
