@@ -1501,29 +1501,26 @@ async function postTransaction() {
   const dp = document.getElementById('dp-waybill');
   if(!dp) return;
   
-  console.log("Populating dispatch dropdown. Dispatches:", allDispatches);
-  
-  // Get ALL waybill IDs that have ANY dispatch (regardless of status)
-  const dispatchedWaybillIds = new Set();
+  // Get ALL waybill IDs that have ANY dispatch (including Delivered and Returned)
+  const allDispatchedWaybillIds = new Set();
   if (allDispatches && allDispatches.length) {
     allDispatches.forEach(dispatch => {
       if (dispatch.waybillid) {
-        dispatchedWaybillIds.add(dispatch.waybillid);
+        allDispatchedWaybillIds.add(dispatch.waybillid);
       }
     });
   }
   
-  console.log("Waybills that already have a dispatch:", [...dispatchedWaybillIds]);
+  console.log("All dispatched waybill IDs:", [...allDispatchedWaybillIds]);
   
   // Clear existing options
   dp.innerHTML = '<option value="">— select waybill —</option>';
   
   if(allClients && allClients.length) {
-    // Filter out waybills that already have ANY dispatch
-    const availableWaybills = allClients.filter(client => !dispatchedWaybillIds.has(client.id));
+    // Filter out waybills that have ANY dispatch (including Delivered/Returned)
+    const availableWaybills = allClients.filter(client => !allDispatchedWaybillIds.has(client.id));
     
-    console.log("Total clients:", allClients.length);
-    console.log("Available waybills (no dispatch yet):", availableWaybills.length);
+    console.log("Available waybills (no dispatch at all):", availableWaybills.length);
     
     availableWaybills.forEach(c => {
       const opt = document.createElement('option');
