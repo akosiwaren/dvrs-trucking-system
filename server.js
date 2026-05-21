@@ -203,7 +203,7 @@ app.post('/api/dispatches', async (req, res) => {
 });
 
 app.put('/api/dispatches/:tripId', async (req, res) => {
-  const { tripId } = req.params;
+  const { tripid } = req.params;
   const updates = req.body;
   try {
     const setClause = Object.keys(updates).map((key, idx) => `${key}=$${idx+2}`).join(',');

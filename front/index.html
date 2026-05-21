@@ -1572,47 +1572,52 @@ async function postTransaction() {
   }
   
   async function loadDispatches() {
-    try {
-      const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
-      const data = await res.json();
-      allDispatches = data; // Store globally
-      const table = document.getElementById('dispatch-table');
-      const countSpan = document.getElementById('dp-count');
-      if(countSpan) countSpan.innerText = data.length;
-      if(!table) return;
-      if(data.length === 0) table.innerHTML = '<tr><td colspan="8">No dispatches</td></tr>';
-      else {
-        table.innerHTML = data.slice().reverse().map(d => `
-          <tr>
-            <td class="mono">${d.tripId}</td>
-            <td class="mono">${d.waybillId}</td>
-            <td>${d.driver}</td>
-            <td>${d.truck}</td>
-            <td>${d.origin||''} → ${d.destination||''}</td>
-            <td>${d.date}</td>
-            <td>${getStatusBadge(d.status)}</td>
-            <td><button class="btn-sm" onclick="viewTrip('${d.tripId}')">View</button></td>
-          </tr>
-        `).join('');
-      }
-      // Update dispatch stats
-      const todayStr = today();
-      document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
-      document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Dispatched').length;
-      document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered').length;
-      // Update trip report dropdown
-      const tripSelect = document.getElementById('tr-trip-id');
-      if(tripSelect) {
-        tripSelect.innerHTML = '<option value="">— select trip —</option>';
-        data.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d.tripId;
-          opt.textContent = `${d.tripId} — ${d.driver} (${d.truck})`;
-          tripSelect.appendChild(opt);
-        });
-      }
-    } catch(e) { console.error(e); }
-  }
+  try {
+    const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
+    const data = await res.json();
+    allDispatches = data;
+    
+    const table = document.getElementById('dispatch-table');
+    const countSpan = document.getElementById('dp-count');
+    if(countSpan) countSpan.innerText = data.length;
+    if(!table) return;
+    
+    if(data.length === 0) {
+      table.innerHTML = '<tr><td colspan="8">No dispatches</div></div>';
+    } else {
+      table.innerHTML = data.slice().reverse().map(d => `
+        <tr>
+          <td class="mono">${d.tripid || 'N/A'}</div>
+          <td class="mono">${d.waybillid || '—'}</div>
+          <td>${d.driver || '—'}</div>
+          <td>${d.truck || '—'}</div>
+          <td>${d.origin || ''} → ${d.destination || ''}</div>
+          <td>${d.date || ''}</div>
+          <td>${getStatusBadge(d.status)}</div>
+          <td><button class="btn-sm" onclick="viewTrip('${d.tripid}')">View</button></div>
+        </tr>
+      `).join('');
+    }
+    
+    // Update dispatch stats
+    const todayStr = today();
+    document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
+    document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Dispatched').length;
+    document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered').length;
+    
+    // Update trip report dropdown
+    const tripSelect = document.getElementById('tr-trip-id');
+    if(tripSelect) {
+      tripSelect.innerHTML = '<option value="">— select trip —</option>';
+      data.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.tripid;
+        opt.textContent = `${d.tripid} — ${d.driver} (${d.truck})`;
+        tripSelect.appendChild(opt);
+      });
+    }
+  } catch(e) { console.error(e); }
+}
   
   async function submitTripReport() {
     const tripId = document.getElementById('tr-trip-id').value;
@@ -1783,7 +1788,7 @@ async function postTransaction() {
 
 function viewTrip(tripId) {
   console.log('viewTrip called with ID:', tripId);
-  const trip = allDispatches.find(t => t.tripId === tripId);
+  const trip = allDispatches.find(t => t.tripid === tripId);
   if (!trip) {
     toast('Trip not found', 'error');
     return;
