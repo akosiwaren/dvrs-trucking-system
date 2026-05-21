@@ -1800,30 +1800,47 @@ function updateStatusDropdown() {
   
   async function submitTripReport() {
   const tripSelect = document.getElementById('tr-trip-id');
-  const statusSelect = document.getElementById('tr-status');
   const tripId = tripSelect.value;
-  const newStatus = statusSelect.value;
+  const status = document.getElementById('tr-status').value;
+  const departure = document.getElementById('tr-depart').value;
+  const arrival = document.getElementById('tr-arrive').value;
+  const notes = document.getElementById('tr-notes').value;
   
   if(!tripId) { 
     toast("Select a trip", "error"); 
     return; 
   }
   
-  if(!newStatus || newStatus === 'Select a trip first') {
-    toast("Please select a valid status", "error");
-    return;
+  // Find the current trip data to preserve existing values
+  const currentTrip = allDispatches.find(t => t.tripid === tripId);
+  
+  // Build update object – only include fields that have values, otherwise keep existing
+  const update = {
+    status: status
+  };
+  
+  // Only update departure if provided, otherwise keep existing
+  if (departure) {
+    update.departuretime = departure;
+  } else if (currentTrip && currentTrip.departuretime) {
+    update.departuretime = currentTrip.departuretime;
   }
   
-  const departure = document.getElementById('tr-depart').value;
-  const arrival = document.getElementById('tr-arrive').value;
-  const notes = document.getElementById('tr-notes').value;
+  // Only update arrival if provided, otherwise keep existing
+  if (arrival) {
+    update.arrivaltime = arrival;
+  } else if (currentTrip && currentTrip.arrivaltime) {
+    update.arrivaltime = currentTrip.arrivaltime;
+  }
   
-  const update = {
-    status: newStatus,
-    departuretime: departure,
-    arrivaltime: arrival,
-    tripnotes: notes
-  };
+  // Only update notes if provided, otherwise keep existing
+  if (notes) {
+    update.tripnotes = notes;
+  } else if (currentTrip && currentTrip.tripnotes) {
+    update.tripnotes = currentTrip.tripnotes;
+  }
+  
+  console.log("Submitting update:", update);
   
   try {
     const res = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches/${tripId}`, { 
@@ -1831,6 +1848,7 @@ function updateStatusDropdown() {
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify(update) 
     });
+    
     if(res.ok) {
       toast("Trip report submitted");
       document.getElementById('tr-trip-id').value = '';

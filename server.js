@@ -207,14 +207,16 @@ app.post('/api/dispatches', async (req, res) => {
 
 app.put('/api/dispatches/:tripid', async (req, res) => {
   const { tripid } = req.params;
-  const { status, departuretime, arrivaltime, tripnotes } = req.body;
+  const updates = req.body;
   
   try {
+    // Build dynamic SET clause
+    const setClause = Object.keys(updates).map((key, idx) => `${key} = $${idx + 1}`).join(', ');
+    const values = [...Object.values(updates), tripid];
+    
     await pool.query(
-      `UPDATE dispatches 
-       SET status = $1, departuretime = $2, arrivaltime = $3, tripnotes = $4
-       WHERE tripid = $5`,
-      [status, departuretime, arrivaltime, tripnotes, tripid]
+      `UPDATE dispatches SET ${setClause} WHERE tripid = $${values.length}`,
+      values
     );
     res.json({ message: 'Updated' });
   } catch (err) {
