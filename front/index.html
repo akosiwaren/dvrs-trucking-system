@@ -738,7 +738,7 @@
           <div class="card-title">D2 — Trip Records <span id="dp-count" class="badge badge-gray">0</span></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Trip ID</th><th>Waybill</th><th>Driver</th><th>Truck</th><th>Route</th><th>Dispatch Date</th><th>Status</th><th>Action</th></tr></thead>
+              <thead><tr><th>Trip ID</th><th>Client</th><th>Driver</th><th>Truck</th><th>Route</th><th>Dispatch Date</th><th>Status</th><th>Action</th></tr></thead>
               <tbody id="dispatch-table"><tr><td colspan="8" class="empty-state">No dispatch orders issued yet.</td></tr></tbody>
             </table>
           </div>
@@ -1132,6 +1132,7 @@
         document.getElementById('cl-count').innerText = allClients.length;
         if (allClients.length === 0) clientTable.innerHTML = '<tr><td colspan="8">No requests</td></tr>';
         else {
+          const sortedClients = [...allClients].sort((a, b) => new Date(b.date) - new Date(a.date));
           clientTable.innerHTML = allClients.map(req => {
             const isPaid = paidWaybillIds.has(req.id);
             const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
@@ -1156,6 +1157,7 @@
         document.getElementById('tx-count').innerText = payments.length;
         if (payments.length === 0) txTable.innerHTML = '<td><td colspan="9">No transactions</td></tr>';
         else {
+              const sortedPayments = [...payments].sort((a, b) => new Date(b.date) - new Date(a.date));
           txTable.innerHTML = payments.map(p => {
             const client = allClients.find(c => c.id === p.waybill);
             return `<tr>
@@ -1585,18 +1587,27 @@ async function postTransaction() {
     if(data.length === 0) {
       table.innerHTML = '<tr><td colspan="8">No dispatches</div></div>';
     } else {
-      table.innerHTML = data.slice().reverse().map(d => `
-        <tr>
-          <td class="mono">${d.tripid || 'N/A'}</div>
-          <td class="mono">${d.waybillid || '—'}</div>
-          <td>${d.driver || '—'}</div>
-          <td>${d.truck || '—'}</div>
-          <td>${d.origin || ''} → ${d.destination || ''}</div>
-          <td>${d.date || ''}</div>
-          <td>${getStatusBadge(d.status)}</div>
-          <td><button class="btn-sm" onclick="viewTrip('${d.tripid}')">View</button></div>
-        </tr>
-      `).join('');
+      // Sort by date (newest first)
+      const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      table.innerHTML = sortedData.map(d => {
+        // Find client name from waybill ID
+        const client = allClients.find(c => c.id === d.waybillid);
+        const clientName = client ? client.client : d.waybillid || '—';
+        
+        return `
+          <tr>
+            <td class="mono">${d.tripid || 'N/A'}</div>
+            <td class="mono">${clientName}</div>
+            <td class="mono">${d.driver || '—'}</div>
+            <td class="mono">${d.truck || '—'}</div>
+            <td class="mono">${d.origin || ''} → ${d.destination || ''}</div>
+            <td class="mono">${d.date || ''}</div>
+            <td class="mono">${getStatusBadge(d.status)}</div>
+            <td class="mono"><button class="btn-sm" onclick="viewTrip('${d.tripid}')">View</button></div>
+          </tr>
+        `;
+      }).join('');
     }
     
     // Update dispatch stats
@@ -1680,6 +1691,7 @@ async function postTransaction() {
       if(!table) return;
       if(records.length === 0) table.innerHTML = '<tr><td colspan="11">No records</td></tr>';
       else {
+              const sortedRecords = [...records].sort((a, b) => new Date(b.reqdate) - new Date(a.reqdate));
         table.innerHTML = records.slice().reverse().map(m => `
           <tr>
             <td class="mono">${m.id}</td>
