@@ -1202,8 +1202,17 @@ function printReceipt() {
   // Clone the receipt content
   const clone = receiptContent.cloneNode(true);
   
-  // Create a complete HTML string with styles that work for print
-  const htmlContent = `
+  // Create a hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+  
+  const iframeDoc = iframe.contentWindow.document;
+  iframeDoc.open();
+  iframeDoc.write(`
     <html>
     <head>
       <title>DVRS Receipt</title>
@@ -1246,33 +1255,21 @@ function printReceipt() {
           border-top: 1px dashed #000;
           padding-top: 10px;
         }
-        @media print {
-          body {
-            background: white;
-            padding: 0;
-          }
-          .receipt {
-            background: white;
-          }
-        }
       </style>
     </head>
     <body>${clone.outerHTML}</body>
     </html>
-  `;
+  `);
+  iframeDoc.close();
   
-  // Create a blob and open in new window
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const printWindow = window.open(url, '_blank');
+  // Wait for content to render, then print
+  iframe.contentWindow.focus();
+  iframe.contentWindow.print();
   
-  printWindow.onload = function() {
-    printWindow.print();
-    printWindow.onafterprint = function() {
-      printWindow.close();
-      URL.revokeObjectURL(url);
-    };
-  };
+  // Remove the iframe after printing
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 1000);
 }
 
 function showReceipt(txId) {
