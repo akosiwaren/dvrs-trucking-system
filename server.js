@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -14,8 +15,8 @@ app.use(express.json());
 // Render provides the DATABASE_URL environment variable automatically.
 // For local testing, you can set it manually or use a local PostgreSQL instance.
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/dvrsdb',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }  // Accept self-signed certificates
 });
 
 // ===== CREATE TABLES IF NOT EXISTS =====
