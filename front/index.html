@@ -1260,7 +1260,7 @@ function showReceipt(txId) {
   console.log('Looking for transaction with txId:', txId);
   console.log('All payments:', allPayments);
   
-  const transaction = allPayments.find(p => p.txId === txId);
+ const transaction = allPayments.find(p => p.txid === txId || p.txId === txId);
   if (!transaction) {
     toast('Transaction not found', 'error');
     return;
@@ -1436,13 +1436,13 @@ async function postTransaction() {
   }
   
   const txData = {
-    txId: 'TX-' + Date.now(),
+    txid: 'TX-' + Date.now(),        // ← lowercase txid
     waybill: waybill,
     amount: amount,
     method: document.getElementById('tx-method').value,
     date: document.getElementById('tx-date').value,
     remarks: document.getElementById('tx-remarks').value,
-    postedBy: "Office Staff"
+    postedby: "Office Staff"          // ← lowercase postedby
   };
   
   try {
