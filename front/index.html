@@ -1502,34 +1502,28 @@ async function postTransaction() {
   if(!dp) return;
   
   console.log("Populating dispatch dropdown. Dispatches:", allDispatches);
-  console.log("Clients:", allClients);
   
-  // Get waybill IDs that are already in active dispatches (not Delivered or Returned)
-  const activeDispatchWaybillIds = new Set();
+  // Get ALL waybill IDs that have ANY dispatch (regardless of status)
+  const dispatchedWaybillIds = new Set();
   if (allDispatches && allDispatches.length) {
     allDispatches.forEach(dispatch => {
-      console.log("Checking dispatch:", dispatch.tripid, "status:", dispatch.status, "waybillid:", dispatch.waybillid);
-      // If dispatch is not completed/finalized, mark its waybill as unavailable
-      if (dispatch.status !== 'Delivered' && dispatch.status !== 'Returned') {
-        if (dispatch.waybillid) {
-          activeDispatchWaybillIds.add(dispatch.waybillid);
-          console.log("Added waybill to active set:", dispatch.waybillid);
-        }
+      if (dispatch.waybillid) {
+        dispatchedWaybillIds.add(dispatch.waybillid);
       }
     });
   }
   
-  console.log("Active waybills (already dispatched):", [...activeDispatchWaybillIds]);
+  console.log("Waybills that already have a dispatch:", [...dispatchedWaybillIds]);
   
   // Clear existing options
   dp.innerHTML = '<option value="">— select waybill —</option>';
   
   if(allClients && allClients.length) {
-    // Filter out waybills that already have an active dispatch
-    const availableWaybills = allClients.filter(client => !activeDispatchWaybillIds.has(client.id));
+    // Filter out waybills that already have ANY dispatch
+    const availableWaybills = allClients.filter(client => !dispatchedWaybillIds.has(client.id));
     
     console.log("Total clients:", allClients.length);
-    console.log("Available waybills:", availableWaybills.length);
+    console.log("Available waybills (no dispatch yet):", availableWaybills.length);
     
     availableWaybills.forEach(c => {
       const opt = document.createElement('option');
