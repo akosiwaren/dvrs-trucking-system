@@ -716,7 +716,7 @@
                 <select class="form-select" id="tr-trip-id"><option value="">— select trip —</option></select>
               </div>
               <div class="form-group"><div class="form-label">Trip Status *</div>
-                <select class="form-select" id="tr-status"><option>Dispatched</option><option>Delivered</option><option>Returned</option></select>
+                <select class="form-select" id="tr-status"><option value="Approved" disabled selected>Approved</option><option value="Delivered">Delivered</option><option value="Returned">Returned</option></select>
               </div>
             </div>
             <div class="form-row">
@@ -1534,16 +1534,16 @@ async function postTransaction() {
   }
   
   const dispatchData = {
-    tripid: 'TRP-' + Math.floor(1000 + Math.random() * 9000),  // ← changed from tripId to tripid
-    waybillid: waybillId,  // ← changed from waybillId to waybillid
+    tripid: 'TRP-' + Math.floor(1000 + Math.random() * 9000),
+    waybillid: waybillId,
     driver: driver,
     truck: truck,
     origin: origin,
     destination: destination,
     date: date,
-    status: 'Dispatched',
+    status: 'Approved',  // ← Changed from 'Dispatched' to 'Approved'
     notes: document.getElementById('dp-notes').value,
-    clientname: '',  // ← added to match database schema
+    clientname: '',
     departuretime: '',
     arrivaltime: '',
     tripnotes: ''
@@ -1556,7 +1556,7 @@ async function postTransaction() {
       body: JSON.stringify(dispatchData) 
     });
     if(res.ok) { 
-      toast("✅ Dispatch issued"); 
+      toast("✅ Dispatch issued and Approved!"); 
       clearDispatchForm(); 
       await loadDispatches(); 
     } else toast("Failed", "error");
@@ -1587,11 +1587,9 @@ async function postTransaction() {
     if(data.length === 0) {
       table.innerHTML = '<tr><td colspan="8">No dispatches</div></div>';
     } else {
-      // Sort by date (newest first)
       const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
       
       table.innerHTML = sortedData.map(d => {
-        // Find client name from waybill ID
         const client = allClients.find(c => c.id === d.waybillid);
         const clientName = client ? client.client : d.waybillid || '—';
         
@@ -1613,44 +1611,115 @@ async function postTransaction() {
     // Update dispatch stats
     const todayStr = today();
     document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
-    document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Dispatched').length;
+    document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Dispatched' || d.status === 'Approved').length;
     document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered').length;
     
-    // Update trip report dropdown
+    // Update trip report dropdown and status dropdown
     const tripSelect = document.getElementById('tr-trip-id');
+    const statusSelect = document.getElementById('tr-status');
+    
     if(tripSelect) {
+      // Store reference to dispatches data for the change event
+      tripSelect.dispatchesData = data;
+      
       tripSelect.innerHTML = '<option value="">— select trip —</option>';
       data.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.tripid;
-        opt.textContent = `${d.tripid} — ${d.driver} (${d.truck})`;
+        opt.textContent = `${d.tripid} — ${d.driver} (${d.truck}) - Current: ${d.status}`;
         tripSelect.appendChild(opt);
       });
+      
+      // Remove existing event listener to avoid duplicates, then add new one
+      tripSelect.removeEventListener('change', updateStatusDropdown);
+      tripSelect.addEventListener('change', updateStatusDropdown);
     }
+    
+    // Initialize status dropdown if no trip selected
+    if(statusSelect) {
+      statusSelect.innerHTML = '<option value="">Select a trip first</option>';
+    }
+    
   } catch(e) { console.error(e); }
+}
+
+// Helper function to update status dropdown based on selected trip
+function updateStatusDropdown() {
+  const tripSelect = document.getElementById('tr-trip-id');
+  const statusSelect = document.getElementById('tr-status');
+  const selectedTripId = tripSelect.value;
+  
+  if (!statusSelect) return;
+  
+  if (!selectedTripId) {
+    statusSelect.innerHTML = '<option value="">Select a trip first</option>';
+    return;
+  }
+  
+  // Find the selected trip from allDispatches
+  const selectedTrip = allDispatches.find(d => d.tripid === selectedTripId);
+  
+  if (!selectedTrip) {
+    statusSelect.innerHTML = '<option value="">Trip not found</option>';
+    return;
+  }
+  
+  const currentStatus = selectedTrip.status;
+  
+  // Clear and rebuild status dropdown
+  statusSelect.innerHTML = '';
+  
+  // Add current status as disabled option
+  const currentOption = document.createElement('option');
+  currentOption.value = currentStatus;
+  currentOption.textContent = `${currentStatus} (current)`;
+  currentOption.disabled = true;
+  statusSelect.appendChild(currentOption);
+  
+  // Add available status options (only Delivered and Returned, not Approved)
+  if (currentStatus !== 'Delivered') {
+    const deliveredOption = document.createElement('option');
+    deliveredOption.value = 'Delivered';
+    deliveredOption.textContent = 'Delivered';
+    statusSelect.appendChild(deliveredOption);
+  }
+  
+  if (currentStatus !== 'Returned') {
+    const returnedOption = document.createElement('option');
+    returnedOption.value = 'Returned';
+    returnedOption.textContent = 'Returned';
+    statusSelect.appendChild(returnedOption);
+  }
+  
+  // Note: 'Approved' is never shown as an available option because drivers cannot select it
 }
   
   async function submitTripReport() {
   const tripSelect = document.getElementById('tr-trip-id');
+  const statusSelect = document.getElementById('tr-status');
   const tripId = tripSelect.value;
-  const status = document.getElementById('tr-status').value;
-  const departure = document.getElementById('tr-depart').value;
-  const arrival = document.getElementById('tr-arrive').value;
-  const notes = document.getElementById('tr-notes').value;
+  const newStatus = statusSelect.value;
   
   if(!tripId) { 
     toast("Select a trip", "error"); 
     return; 
   }
   
+  if(!newStatus || newStatus === 'Select a trip first') {
+    toast("Please select a valid status", "error");
+    return;
+  }
+  
+  const departure = document.getElementById('tr-depart').value;
+  const arrival = document.getElementById('tr-arrive').value;
+  const notes = document.getElementById('tr-notes').value;
+  
   const update = {
-    status: status,
-    departuretime: departure,   // ← lowercase, matching database column
-    arrivaltime: arrival,       // ← lowercase, matching database column
+    status: newStatus,
+    departuretime: departure,
+    arrivaltime: arrival,
     tripnotes: notes
   };
-  
-  console.log("Sending update:", update); // Debug log
   
   try {
     const res = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches/${tripId}`, { 
@@ -1660,19 +1729,15 @@ async function postTransaction() {
     });
     if(res.ok) {
       toast("Trip report submitted");
-      // Clear form
       document.getElementById('tr-trip-id').value = '';
       document.getElementById('tr-depart').value = '';
       document.getElementById('tr-arrive').value = '';
       document.getElementById('tr-notes').value = '';
-      await loadDispatches(); // Refresh the table
+      await loadDispatches();
     } else {
-      const errorText = await res.text();
-      console.error("Server error:", errorText);
       toast("Failed to submit", "error");
     }
   } catch(e) { 
-    console.error(e);
     toast("Error", "error"); 
   }
 }
