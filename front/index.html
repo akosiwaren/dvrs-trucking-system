@@ -1640,7 +1640,6 @@ function populateDispatchWaybillDropdown() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
     const data = await res.json();
-    // Reverse to show newest first
     const sortedData = [...data].reverse();
     allDispatches = sortedData;
 
@@ -1650,9 +1649,8 @@ function populateDispatchWaybillDropdown() {
     if(!table) return;
     
     if(data.length === 0) {
-      table.innerHTML = '</table><td colspan="8">No dispatches</div></div>';
+      table.innerHTML = '</tr><td colspan="8">No dispatches</div></div>';
     } else {
-      // Use sortedData (already reversed) for display
       table.innerHTML = sortedData.map(d => {
         const client = allClients.find(c => c.id === d.waybillid);
         const clientName = client ? client.client : d.waybillid || '—';
@@ -1678,15 +1676,24 @@ function populateDispatchWaybillDropdown() {
     document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Approved' || d.status === 'Dispatched').length;
     document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered' || d.status === 'Returned').length;
 
-    // Update trip report dropdown and status dropdown
+    // Update trip report dropdown – filter out returned trips, sort by status priority
     const tripSelect = document.getElementById('tr-trip-id');
     const statusSelect = document.getElementById('tr-status');
     
     if(tripSelect) {
-      tripSelect.dispatchesData = data;
+      // Filter out trips that are Returned
+      let availableTrips = data.filter(d => d.status !== 'Returned');
+      
+      // Sort by status priority: Approved first, then Dispatched, then Delivered
+      const statusOrder = { 'Approved': 1, 'Dispatched': 2, 'Delivered': 3 };
+      availableTrips = availableTrips.sort((a, b) => {
+        const orderA = statusOrder[a.status] || 99;
+        const orderB = statusOrder[b.status] || 99;
+        return orderA - orderB;
+      });
       
       tripSelect.innerHTML = '<option value="">— select trip —</option>';
-      data.forEach(d => {
+      availableTrips.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.tripid;
         opt.textContent = `${d.tripid} — ${d.driver} (${d.truck}) - ${d.status}`;
