@@ -1830,11 +1830,10 @@ function updateStatusDropdown() {
   // ============================================================
   // MAINTENANCE
   // ============================================================
- async function loadMaintenanceRecords() {
+async function loadMaintenanceRecords() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
     const records = await res.json();
-    
     allMaintenance = records;
     
     const table = document.getElementById('maintenance-table');
@@ -1866,8 +1865,7 @@ function updateStatusDropdown() {
             <td>${badgeForStatus(m.status)}</div>
             <td>
               <button class="btn-sm" onclick="viewMaintenanceRecord('${m.id}')">View</button>
-              <button class="btn-sm btn-danger" onclick="deleteMaintRecord('${m.id}')">Del</button>
-            </td>
+            </div>
           </tr>
         `;
       }).join('');
