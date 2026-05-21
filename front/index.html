@@ -1159,7 +1159,7 @@
           txTable.innerHTML = payments.map(p => {
             const client = allClients.find(c => c.id === p.waybill);
             return `<tr>
-              <td class="mono">${p.txId}</td>
+              <td class="mono">${p.txid || p.txId || '???'}</td>
               <td class="mono">${p.waybill}</td>
               <td>${client ? client.client : '—'}</td>
               <td>₱${parseFloat(p.amount||0).toLocaleString()}</td>
@@ -1260,12 +1260,11 @@ function showReceipt(txId) {
   console.log('Looking for transaction with txId:', txId);
   console.log('All payments:', allPayments);
   
- const transaction = allPayments.find(p => p.txid === txId || p.txId === txId);
+  const transaction = allPayments.find(p => p.txid === txIdFromButton);
   if (!transaction) {
     toast('Transaction not found', 'error');
     return;
   }
-  
   const client = allClients.find(c => c.id === transaction.waybill);
   const clientName = client ? client.client : '—';
   
