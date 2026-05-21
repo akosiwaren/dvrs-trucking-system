@@ -1620,28 +1620,45 @@ async function postTransaction() {
 }
   
   async function submitTripReport() {
-    const tripId = document.getElementById('tr-trip-id').value;
-    const status = document.getElementById('tr-status').value;
-    if(!tripId) { toast("Select a trip", "error"); return; }
-    const update = {
-      status: status,
-      departureTime: document.getElementById('tr-depart').value,
-      arrivalTime: document.getElementById('tr-arrive').value,
-      tripNotes: document.getElementById('tr-notes').value,
-      updatedAt: new Date().toISOString()
-    };
-    try {
-      const res = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches/${tripId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(update) });
-      if(res.ok) {
-        toast("Trip report submitted");
-        document.getElementById('tr-trip-id').value = '';
-        document.getElementById('tr-depart').value = '';
-        document.getElementById('tr-arrive').value = '';
-        document.getElementById('tr-notes').value = '';
-        await loadDispatches();
-      } else toast("Failed", "error");
-    } catch(e) { toast("Error", "error"); }
+  const tripSelect = document.getElementById('tr-trip-id');
+  const tripId = tripSelect.value;
+  const status = document.getElementById('tr-status').value;
+  
+  if(!tripId) { 
+    toast("Select a trip", "error"); 
+    return; 
   }
+  
+  const update = {
+    status: status,
+    departuretime: document.getElementById('tr-depart').value,  // lowercase
+    arrivaltime: document.getElementById('tr-arrive').value,    // lowercase
+    tripnotes: document.getElementById('tr-notes').value        // lowercase
+  };
+  
+  try {
+    const res = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches/${tripId}`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(update) 
+    });
+    if(res.ok) {
+      toast("Trip report submitted");
+      document.getElementById('tr-trip-id').value = '';
+      document.getElementById('tr-depart').value = '';
+      document.getElementById('tr-arrive').value = '';
+      document.getElementById('tr-notes').value = '';
+      await loadDispatches();
+    } else {
+      const errorText = await res.text();
+      console.error("Server error:", errorText);
+      toast("Failed to submit", "error");
+    }
+  } catch(e) { 
+    console.error(e);
+    toast("Error", "error"); 
+  }
+}
   
   function clearTripForm() {
     document.getElementById('tr-trip-id').value = '';
