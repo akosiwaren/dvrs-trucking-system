@@ -1028,11 +1028,16 @@
     return '<span class="badge ' + (map[s]||'badge-gray') + '">' + s + '</span>';
   }
   
-  function getStatusBadge(status) {
-    const classes = { 'Dispatched': 'badge-blue', 'Delivered': 'badge-green', 'Returned': 'badge-gray' };
-    const cls = classes[status] || 'badge-gray';
-    return `<span class="badge ${cls}">${status}</span>`;
-  }
+function getStatusBadge(status) {
+  const classes = { 
+    'Approved': 'badge-purple',
+    'Dispatched': 'badge-blue', 
+    'Delivered': 'badge-green', 
+    'Returned': 'badge-gray' 
+  };
+  const cls = classes[status] || 'badge-gray';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
   
   function deleteConfirm(msg, cb) {
     document.getElementById('delete-msg').textContent = msg;
@@ -1610,10 +1615,10 @@ async function postTransaction() {
     
     // Update dispatch stats
     const todayStr = today();
-    document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
-    document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Dispatched' || d.status === 'Approved').length;
-    document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered').length;
-    
+document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
+document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Approved' || d.status === 'Dispatched').length;
+document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered' || d.status === 'Returned').length;
+   
     // Update trip report dropdown and status dropdown
     const tripSelect = document.getElementById('tr-trip-id');
     const statusSelect = document.getElementById('tr-status');
@@ -1676,22 +1681,34 @@ function updateStatusDropdown() {
   currentOption.disabled = true;
   statusSelect.appendChild(currentOption);
   
-  // Add available status options (only Delivered and Returned, not Approved)
-  if (currentStatus !== 'Delivered') {
+  // Add available status options based on current status
+  if (currentStatus === 'Approved') {
+    // If Approved, driver can change to Dispatched
+    const dispatchedOption = document.createElement('option');
+    dispatchedOption.value = 'Dispatched';
+    dispatchedOption.textContent = 'Dispatched';
+    statusSelect.appendChild(dispatchedOption);
+  } 
+  else if (currentStatus === 'Dispatched') {
+    // If Dispatched, driver can change to Delivered or Returned
     const deliveredOption = document.createElement('option');
     deliveredOption.value = 'Delivered';
     deliveredOption.textContent = 'Delivered';
     statusSelect.appendChild(deliveredOption);
-  }
-  
-  if (currentStatus !== 'Returned') {
+    
     const returnedOption = document.createElement('option');
     returnedOption.value = 'Returned';
     returnedOption.textContent = 'Returned';
     statusSelect.appendChild(returnedOption);
   }
-  
-  // Note: 'Approved' is never shown as an available option because drivers cannot select it
+  else if (currentStatus === 'Delivered') {
+    // If Delivered, only show Returned (if needed)
+    const returnedOption = document.createElement('option');
+    returnedOption.value = 'Returned';
+    returnedOption.textContent = 'Returned';
+    statusSelect.appendChild(returnedOption);
+  }
+  // For 'Returned' or other statuses, no further options
 }
   
   async function submitTripReport() {
