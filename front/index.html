@@ -1501,14 +1501,19 @@ async function postTransaction() {
   const dp = document.getElementById('dp-waybill');
   if(!dp) return;
   
+  console.log("Populating dispatch dropdown. Dispatches:", allDispatches);
+  console.log("Clients:", allClients);
+  
   // Get waybill IDs that are already in active dispatches (not Delivered or Returned)
   const activeDispatchWaybillIds = new Set();
   if (allDispatches && allDispatches.length) {
     allDispatches.forEach(dispatch => {
+      console.log("Checking dispatch:", dispatch.tripid, "status:", dispatch.status, "waybillid:", dispatch.waybillid);
       // If dispatch is not completed/finalized, mark its waybill as unavailable
       if (dispatch.status !== 'Delivered' && dispatch.status !== 'Returned') {
         if (dispatch.waybillid) {
           activeDispatchWaybillIds.add(dispatch.waybillid);
+          console.log("Added waybill to active set:", dispatch.waybillid);
         }
       }
     });
@@ -1523,6 +1528,7 @@ async function postTransaction() {
     // Filter out waybills that already have an active dispatch
     const availableWaybills = allClients.filter(client => !activeDispatchWaybillIds.has(client.id));
     
+    console.log("Total clients:", allClients.length);
     console.log("Available waybills:", availableWaybills.length);
     
     availableWaybills.forEach(c => {
