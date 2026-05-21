@@ -1519,25 +1519,49 @@ async function postTransaction() {
   }
   
   async function issueDispatch() {
-    const waybillId = document.getElementById('dp-waybill').value;
-    const driver = document.getElementById('dp-driver').value;
-    const truck = document.getElementById('dp-truck').value;
-    const origin = document.getElementById('dp-origin').value;
-    const destination = document.getElementById('dp-dest').value;
-    const date = document.getElementById('dp-date').value;
-    if(!waybillId || !driver || !truck || !date) { toast("Please fill all required fields", "error"); return; }
-    const dispatchData = {
-      tripId: 'TRP-' + Math.floor(1000+Math.random()*9000),
-      waybillId, driver, truck, origin, destination, date,
-      status: 'Dispatched', notes: document.getElementById('dp-notes').value,
-      createdAt: new Date().toISOString()
-    };
-    try {
-      const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dispatchData) });
-      if(res.ok) { toast("✅ Dispatch issued"); clearDispatchForm(); await loadDispatches(); }
-      else toast("Failed", "error");
-    } catch(e) { toast("Server error", "error"); }
+  const waybillId = document.getElementById('dp-waybill').value;
+  const driver = document.getElementById('dp-driver').value;
+  const truck = document.getElementById('dp-truck').value;
+  const origin = document.getElementById('dp-origin').value;
+  const destination = document.getElementById('dp-dest').value;
+  const date = document.getElementById('dp-date').value;
+  
+  if(!waybillId || !driver || !truck || !date) { 
+    toast("Please fill all required fields", "error"); 
+    return; 
   }
+  
+  const dispatchData = {
+    tripid: 'TRP-' + Math.floor(1000 + Math.random() * 9000),  // ← changed from tripId to tripid
+    waybillid: waybillId,  // ← changed from waybillId to waybillid
+    driver: driver,
+    truck: truck,
+    origin: origin,
+    destination: destination,
+    date: date,
+    status: 'Dispatched',
+    notes: document.getElementById('dp-notes').value,
+    clientname: '',  // ← added to match database schema
+    departuretime: '',
+    arrivaltime: '',
+    tripnotes: ''
+  };
+  
+  try {
+    const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(dispatchData) 
+    });
+    if(res.ok) { 
+      toast("✅ Dispatch issued"); 
+      clearDispatchForm(); 
+      await loadDispatches(); 
+    } else toast("Failed", "error");
+  } catch(e) { 
+    toast("Server error", "error"); 
+  }
+}
   
   function clearDispatchForm() {
     document.getElementById('dp-waybill').value = '';

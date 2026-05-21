@@ -188,7 +188,7 @@ app.get('/api/dispatches', async (req, res) => {
 });
 
 app.post('/api/dispatches', async (req, res) => {
-  const { tripId, waybillId, driver, truck, origin, destination, date, status, notes, clientName, departureTime, arrivalTime, tripNotes } = req.body;
+  const { tripid, waybillId, driver, truck, origin, destination, date, status, notes, clientName, departureTime, arrivalTime, tripNotes } = req.body;
   try {
     await pool.query(
       `INSERT INTO dispatches (tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes)
