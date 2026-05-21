@@ -2313,10 +2313,11 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
 
     // Helper: summary row (same as in viewReport)
     const summaryBlock = (stats) => `
-      <div class="report-summary-row">
-        ${stats.map(s => `<div class="summary-item"><span class="summary-label">${s.label}</span><span class="summary-value">${s.value}</span></div>`).join('')}
-      </div>
-    `;
+  <div style="display: flex; flex-wrap: nowrap; justify-content: space-around; gap: 20px; margin: 15px 0; background: var(--gray-50); padding: 10px; border-radius: var(--radius); overflow-x: auto;">
+    ${stats.map(s => `<div style="text-align: center; flex: 1; min-width: 70px;"><div style="font-size: 11px; color: var(--text-tertiary);">${s.label}</div><div style="font-size: 20px; font-weight: 600; color: var(--text);">${s.value}</div></div>`).join('')}
+  </div>
+`;
+
 
     let content = '';
     let header = `<div class="report-header">
@@ -2332,11 +2333,12 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
       const delivered = dispatches.filter(d => d.status === 'Delivered').length;
       const returned = dispatches.filter(d => d.status === 'Returned').length;
       const stats = [
-        { label: 'Total Trips', value: dispatches.length },
-        { label: 'Dispatched', value: dispatched },
-        { label: 'Delivered', value: delivered },
-        { label: 'Returned', value: returned }
-      ];
+  { label: 'Total Trips', value: dispatches.length },
+  { label: 'Approved', value: approved },
+  { label: 'Dispatched', value: dispatched },
+  { label: 'Delivered', value: delivered },
+  { label: 'Returned', value: returned }
+];
       content = `<h2>Trip & Dispatch Summary</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
