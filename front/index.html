@@ -1092,15 +1092,15 @@ function getStatusBadge(status) {
   try {
     const response = await fetch(`https://dvrs-trucking-system.onrender.com/api/clients?t=${Date.now()}`);
     const data = await response.json();
+    // Reverse to show newest first (most recent records at top)
     allClients = [...data].reverse();
     
     const payResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/payments?t=${Date.now()}`);
     const payments = await payResponse.json();
-    allPayments = payments;
+    // Reverse to show newest first
     const sortedPayments = [...payments].reverse();
-    payments = sortedPayments;
     allPayments = sortedPayments;
-    const paidWaybillIds = new Set(payments.map(p => p.waybill));
+    const paidWaybillIds = new Set(sortedPayments.map(p => p.waybill));
     
     const tripsResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches?t=${Date.now()}`);
     const dispatches = await tripsResponse.json();
@@ -1115,12 +1115,13 @@ function getStatusBadge(status) {
     // Recent client requests table
     const dashTable = document.getElementById('dash-req-table');
     if (dashTable) {
-      if (data.length === 0) dashTable.innerHTML = '<tr><td colspan="3">No requests</div></div>';
+      if (data.length === 0) dashTable.innerHTML = '</table><td colspan="3">No requests</div></div>';
       else {
         let html = '';
+        // Show 5 most recent (already reversed)
         data.slice(-5).reverse().forEach(req => {
           const isPaid = paidWaybillIds.has(req.id);
-          html += `<tr><td>${req.client}</td><td>${req.service}</td><td><span class="badge ${isPaid ? 'badge-green' : 'badge-amber'}">${isPaid ? 'Paid' : 'Pending'}</span></td></tr>`;
+          html += `<tr><td>${req.client}</div><td>${req.service}</div><td><span class="badge ${isPaid ? 'badge-green' : 'badge-amber'}">${isPaid ? 'Paid' : 'Pending'}</span></div></tr>`;
         });
         dashTable.innerHTML = html;
       }
@@ -1135,71 +1136,63 @@ function getStatusBadge(status) {
         let html = '';
         active.slice(-5).reverse().forEach(t => {
           const route = t.destination ? `${t.origin||''} → ${t.destination}` : (t.route||'—');
-          html += `<tr><td>${t.driver||'—'}</td><td>${route}</td><td><span class="badge badge-blue">${t.status||'Dispatched'}</span></td></tr>`;
+          html += `<tr><td>${t.driver||'—'}</div><td>${route}</div><td><span class="badge badge-blue">${t.status||'Dispatched'}</span></div></tr>`;
         });
         dashTripTable.innerHTML = html;
       }
     }
     
-    // All client requests table
+    // All client requests table - newest first (already reversed)
     const clientTable = document.getElementById('clients-table');
-if (clientTable) {
-  document.getElementById('cl-count').innerText = allClients.length;
-  if (allClients.length === 0) {
-    clientTable.innerHTML = '<tr><td colspan="8">No requests</div></div>';
-  } else {
-    // Sort by date (newest first)
-    const sortedClients = [...allClients].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (clientTable) {
+      document.getElementById('cl-count').innerText = allClients.length;
+      if (allClients.length === 0) {
+        clientTable.innerHTML = '<tr><td colspan="8">No requests</div></div>';
+      } else {
+        clientTable.innerHTML = allClients.map(req => {
+          const isPaid = paidWaybillIds.has(req.id);
+          const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
+          const statusClass = isPaid ? 'badge-green' : 'badge-amber';
+          return `<tr>
+            <td class="mono"><strong>${req.id}</strong></div>
+            <td>${req.client}</div>
+            <td>${req.service}</div>
+            <td>${req.origin||''} → ${req.dest||''}</div>
+            <td>${req.date||''}</div>
+            <td>₱${parseFloat(req.amount||0).toLocaleString()}</div>
+            <td><span class="badge ${statusClass}">${statusText}</span></div>
+            <td><button class="btn-sm" onclick="viewWaybill('${req.id}')">View</button></div>
+          </tr>`;
+        }).join('');
+      }
+    }
     
-    clientTable.innerHTML = sortedClients.map(req => {
-      const isPaid = paidWaybillIds.has(req.id);
-      const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
-      const statusClass = isPaid ? 'badge-green' : 'badge-amber';
-      return `<tr>
-        <td class="mono"><strong>${req.id}</strong></div>
-        <td>${req.client}</div>
-        <td>${req.service}</div>
-        <td>${req.origin||''} → ${req.dest||''}</div>
-        <td>${req.date||''}</div>
-        <td>₱${parseFloat(req.amount||0).toLocaleString()}</div>
-        <td><span class="badge ${statusClass}">${statusText}</span></div>
-        <td><button class="btn-sm" onclick="viewWaybill('${req.id}')">View</button></div>
-      <tr>`;
-    }).join('');
-  }
-}
-
-    
-    // Transactions table
-    // Transactions table – newest first
-const txTable = document.getElementById('transactions-table');
-if (txTable) {
-  document.getElementById('tx-count').innerText = payments.length;
-  if (payments.length === 0) {
-    txTable.innerHTML = '<tr><td colspan="9">No transactions</div></div>';
-  } else {
-    // Sort by date (newest first)
-    const sortedPayments = [...payments].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    txTable.innerHTML = sortedPayments.map(p => {
-      const client = allClients.find(c => c.id === p.waybill);
-      return `</td>
-        <td class="mono">${p.txid || p.txId || '???'}</div>
-        <td class="mono">${p.waybill}</div>
-        <td>${client ? client.client : '—'}</div>
-        <td>₱${parseFloat(p.amount||0).toLocaleString()}</div>
-        <td><span class="badge badge-gray">${p.method}</span></div>
-        <td>${p.date}</div>
-        <td>${p.remarks||'—'}</div>
-        <td>${p.postedBy||'Office'}</div>
-        <td><button class="btn-sm" onclick="showReceipt('${p.txid || p.txId}')">Receipt</button></div>
-      </tr>`;
-    }).join('');
-  }
-}
+    // Transactions table - newest first (already reversed)
+    const txTable = document.getElementById('transactions-table');
+    if (txTable) {
+      document.getElementById('tx-count').innerText = allPayments.length;
+      if (allPayments.length === 0) {
+        txTable.innerHTML = '<table><td colspan="9">No transactions</div></div>';
+      } else {
+        txTable.innerHTML = allPayments.map(p => {
+          const client = allClients.find(c => c.id === p.waybill);
+          return `<tr>
+            <td class="mono">${p.txid || p.txId || '???'}</div>
+            <td class="mono">${p.waybill}</div>
+            <td>${client ? client.client : '—'}</div>
+            <td>₱${parseFloat(p.amount||0).toLocaleString()}</div>
+            <td><span class="badge badge-gray">${p.method}</span></div>
+            <td>${p.date}</div>
+            <td>${p.remarks||'—'}</div>
+            <td>${p.postedBy||'Office'}</div>
+            <td><button class="btn-sm" onclick="showReceipt('${p.txid || p.txId}')">Receipt</button></div>
+          </tr>`;
+        }).join('');
+      }
+    }
     
     // Transaction summary numbers
-    const totalCollected = payments.reduce((s,p) => s + parseFloat(p.amount||0), 0);
+    const totalCollected = allPayments.reduce((s,p) => s + parseFloat(p.amount||0), 0);
     const totalValue = allClients.reduce((s,c) => s + parseFloat(c.amount||0), 0);
     document.getElementById('tx-total').innerText = fmt(totalCollected);
     document.getElementById('tx-outstanding').innerText = fmt(totalValue - totalCollected);
@@ -1647,6 +1640,7 @@ function populateDispatchWaybillDropdown() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
     const data = await res.json();
+    // Reverse to show newest first
     const sortedData = [...data].reverse();
     allDispatches = sortedData;
 
@@ -1656,10 +1650,9 @@ function populateDispatchWaybillDropdown() {
     if(!table) return;
     
     if(data.length === 0) {
-      table.innerHTML = '<tr><td colspan="8">No dispatches</div></div>';
+      table.innerHTML = '</table><td colspan="8">No dispatches</div></div>';
     } else {
-      const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+      // Use sortedData (already reversed) for display
       table.innerHTML = sortedData.map(d => {
         const client = allClients.find(c => c.id === d.waybillid);
         const clientName = client ? client.client : d.waybillid || '—';
@@ -1681,16 +1674,15 @@ function populateDispatchWaybillDropdown() {
     
     // Update dispatch stats
     const todayStr = today();
-document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
-document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Approved' || d.status === 'Dispatched').length;
-document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered' || d.status === 'Returned').length;
+    document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
+    document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Approved' || d.status === 'Dispatched').length;
+    document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered' || d.status === 'Returned').length;
 
     // Update trip report dropdown and status dropdown
     const tripSelect = document.getElementById('tr-trip-id');
     const statusSelect = document.getElementById('tr-status');
     
     if(tripSelect) {
-      // Store reference to dispatches data for the change event
       tripSelect.dispatchesData = data;
       
       tripSelect.innerHTML = '<option value="">— select trip —</option>';
@@ -1701,12 +1693,10 @@ document.getElementById('disp-done').innerText = data.filter(d => d.status === '
         tripSelect.appendChild(opt);
       });
       
-      // Remove existing event listener to avoid duplicates, then add new one
       tripSelect.removeEventListener('change', updateStatusDropdown);
       tripSelect.addEventListener('change', updateStatusDropdown);
     }
     
-    // Initialize status dropdown if no trip selected
     if(statusSelect) {
       statusSelect.innerHTML = '<option value="">Select a trip first</option>';
     }
@@ -1846,9 +1836,9 @@ async function loadMaintenanceRecords() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
     const records = await res.json();
+    // Reverse to show newest first
     const sortedRecords = [...records].reverse();
     allMaintenance = sortedRecords;
-
 
     const table = document.getElementById('maintenance-table');
     const count = document.getElementById('mt-count');
@@ -1858,11 +1848,8 @@ async function loadMaintenanceRecords() {
     if(records.length === 0) {
       table.innerHTML = '<tr><td colspan="11">No records</div></div>';
     } else {
-      // Sort by date (newest first)
-      const sortedRecords = [...records].sort((a, b) => new Date(b.reqdate) - new Date(a.reqdate));
-      
+      // Use sortedRecords (already reversed) for display
       table.innerHTML = sortedRecords.map(m => {
-        // Format the date properly
         const displayDate = m.completedDate ? fmtDate(m.completedDate) : (m.reqdate ? fmtDate(m.reqdate) : '—');
         
         return `
