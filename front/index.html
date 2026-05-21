@@ -2202,7 +2202,7 @@ async function viewReport(type) {
             ${dispatches.map(d => {
               const client = clients.find(c => c.id === d.waybillid);
               const clientName = client ? client.client : '—';
-              return `<tr><td class="mono">${d.tripid || 'N/A'}</div><td>${clientName}</div><td>${d.driver || ''}</div><td>${d.truck || ''}</div><td>${d.origin || ''} → ${d.destination || ''}</div><td>${d.date || ''}</div><td>${d.status || ''}</div><tr>`;
+              return `<tr><td class="mono">${d.tripid || 'N/A'}</div><td>${clientName}</div><td>${d.driver || ''}</div><td>${d.truck || ''}</div><td>${d.origin || ''} → ${d.destination || ''}</div><td>${d.date || ''}</div><td>${d.status || ''}</div></tr>`;
             }).join('')}
           </tbody>
         </table>
