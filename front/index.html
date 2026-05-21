@@ -763,11 +763,25 @@
                   <option>Truck #01</option><option>Truck #02</option><option>Truck #03</option><option>Truck #04</option><option>Truck #05</option><option>Truck #07</option><option>Truck #09</option><option>Truck #11</option>
                 </select>
               </div>
-              <div class="form-group"><div class="form-label">Issue Type *</div>
-                <select class="form-select" id="mt-type">
-                  <option>Preventive Maintenance</option><option>Brake System</option><option>Engine Repair</option><option>Tires</option><option>Electrical</option><option>Annual PMS</option><option>Oil Change</option><option>Suspension</option><option>Cooling System</option>
-                </select>
-              </div>
+              <div class="form-group">
+  <div class="form-label">Issue Type *</div>
+  <select class="form-select" id="mt-type" onchange="toggleOtherIssueType()">
+    <option>Preventive Maintenance</option>
+    <option>Brake System</option>
+    <option>Engine Repair</option>
+    <option>Tires</option>
+    <option>Electrical</option>
+    <option>Annual PMS</option>
+    <option>Oil Change</option>
+    <option>Suspension</option>
+    <option>Cooling System</option>
+    <option value="other">Others</option>
+  </select>
+</div>
+<div class="form-group" id="other-issue-group" style="display: none;">
+  <div class="form-label">Please specify issue type</div>
+  <input type="text" id="mt-other-type" placeholder="e.g. Transmission, Clutch, etc.">
+</div>
             </div>
             <div class="form-row">
               <div class="form-group"><div class="form-label">Request Date *</div><input type="date" id="mt-req-date"></div>
@@ -1950,31 +1964,69 @@ function closeMaintenanceModal() {
 }
   
   async function sendServiceRequest() {
-    const reqDate = document.getElementById('mt-req-date').value;
-    if(!reqDate) { toast("Request date required", "error"); return; }
-    const data = {
-      id: 'MR-' + Date.now(),
-      truck: document.getElementById('mt-truck').value,
-      type: document.getElementById('mt-type').value,
-      reqDate: reqDate,
-      priority: document.getElementById('mt-priority').value,
-      provider: document.getElementById('mt-provider').value.trim() || 'TBA',
-      estCost: parseFloat(document.getElementById('mt-est-cost').value) || 0,
-      description: document.getElementById('mt-desc').value,
-      status: 'Scheduled', parts:0, labor:0, total:0
-    };
-    try {
-      const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      if(res.ok) {
-        toast("Service request sent");
-        document.getElementById('mt-req-date').value = '';
-        document.getElementById('mt-provider').value = '';
-        document.getElementById('mt-est-cost').value = '';
-        document.getElementById('mt-desc').value = '';
-        await loadMaintenanceRecords();
-      } else toast("Failed", "error");
-    } catch(e) { toast("Error", "error"); }
+  const reqDate = document.getElementById('mt-req-date').value;
+  if(!reqDate) { toast("Request date required", "error"); return; }
+  
+  // Get issue type – use custom value if "Others" is selected
+  let issueType = document.getElementById('mt-type').value;
+  if (issueType === 'other') {
+    const customType = document.getElementById('mt-other-type').value.trim();
+    if (!customType) {
+      toast("Please specify the issue type", "error");
+      return;
+    }
+    issueType = customType;
   }
+  
+  const data = {
+    id: 'MR-' + Date.now(),
+    truck: document.getElementById('mt-truck').value,
+    type: issueType,
+    reqDate: reqDate,
+    priority: document.getElementById('mt-priority').value,
+    provider: document.getElementById('mt-provider').value.trim() || 'TBA',
+    estCost: parseFloat(document.getElementById('mt-est-cost').value) || 0,
+    description: document.getElementById('mt-desc').value,
+    status: 'Scheduled',
+    parts: 0,
+    labor: 0,
+    total: 0
+  };
+  
+  try {
+    const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(data) 
+    });
+    if(res.ok) {
+      toast("Service request sent");
+      document.getElementById('mt-req-date').value = '';
+      document.getElementById('mt-provider').value = '';
+      document.getElementById('mt-est-cost').value = '';
+      document.getElementById('mt-desc').value = '';
+      document.getElementById('mt-other-type').value = '';
+      document.getElementById('other-issue-group').style.display = 'none';
+      document.getElementById('mt-type').value = 'Preventive Maintenance';
+      await loadMaintenanceRecords();
+    } else toast("Failed", "error");
+  } catch(e) { toast("Error", "error"); }
+}
+
+function toggleOtherIssueType() {
+  const issueTypeSelect = document.getElementById('mt-type');
+  const otherGroup = document.getElementById('other-issue-group');
+  const otherInput = document.getElementById('mt-other-type');
+  
+  if (issueTypeSelect.value === 'other') {
+    otherGroup.style.display = 'flex';
+    otherInput.required = true;
+  } else {
+    otherGroup.style.display = 'none';
+    otherInput.required = false;
+    otherInput.value = '';
+  }
+}
   
   function clearMaintForm() {
     ['mt-req-date','mt-provider','mt-est-cost','mt-desc'].forEach(id => document.getElementById(id).value = '');
