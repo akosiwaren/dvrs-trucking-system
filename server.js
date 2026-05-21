@@ -162,12 +162,12 @@ app.get('/api/payments', async (req, res) => {
 });
 
 app.post('/api/payments', async (req, res) => {
-  const { txId, waybill, amount, method, date, remarks, postedBy } = req.body;
+  const { txid, waybill, amount, method, date, remarks, postedby } = req.body;
   try {
     await pool.query(
       `INSERT INTO payments (txid, waybill, amount, method, date, remarks, postedby)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [txId, waybill, amount, method, date, remarks, postedBy]
+      [txid, waybill, amount, method, date, remarks, postedby]
     );
     res.status(201).json(req.body);
   } catch (err) {
