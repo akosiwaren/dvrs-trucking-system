@@ -2166,7 +2166,6 @@ async function viewReport(type) {
       fetch('https://dvrs-trucking-system.onrender.com/api/maintenance').then(r=>r.json())
     ]);
     
-    // Helper: one‑line summary block (flex row)
     const summaryBlock = (stats) => `
       <div class="report-summary-row">
         ${stats.map(s => `<div class="summary-item"><span class="summary-label">${s.label}</span><span class="summary-value">${s.value}</span></div>`).join('')}
@@ -2186,8 +2185,10 @@ async function viewReport(type) {
       const dispatched = dispatches.filter(d => d.status === 'Dispatched').length;
       const delivered = dispatches.filter(d => d.status === 'Delivered').length;
       const returned = dispatches.filter(d => d.status === 'Returned').length;
+      const approved = dispatches.filter(d => d.status === 'Approved').length;
       const stats = [
         { label: 'Total Trips', value: dispatches.length },
+        { label: 'Approved', value: approved },
         { label: 'Dispatched', value: dispatched },
         { label: 'Delivered', value: delivered },
         { label: 'Returned', value: returned }
@@ -2196,16 +2197,20 @@ async function viewReport(type) {
         <h2>Trip & Dispatch Summary</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
-          <thead><tr><th>Trip ID</th><th>Driver</th><th>Truck</th><th>Route</th><th>Date</th><th>Status</th></tr></thead>
+          <thead><tr><th>Trip ID</th><th>Client</th><th>Driver</th><th>Truck</th><th>Route</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            ${dispatches.map(d => `<tr><td class="mono">${d.tripId || d.id}</td><td>${d.driver}</td><td>${d.truck}</td><td>${d.origin || ''} → ${d.destination || ''}</td><td>${d.date}</td><td>${d.status}</td></tr>`).join('')}
+            ${dispatches.map(d => {
+              const client = clients.find(c => c.id === d.waybillid);
+              const clientName = client ? client.client : '—';
+              return `<tr><td class="mono">${d.tripid || 'N/A'}</div><td>${clientName}</div><td>${d.driver || ''}</div><td>${d.truck || ''}</div><td>${d.origin || ''} → ${d.destination || ''}</div><td>${d.date || ''}</div><td>${d.status || ''}</div><tr>`;
+            }).join('')}
           </tbody>
         </table>
         ${footer}`;
     }
     else if (type === 'transaction-log') {
       titleEl.textContent = 'Client Transaction Log';
-      const revenue = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+      const revenue = payments.reduce((s,p) => s + parseFloat(p.amount || 0), 0);
       const stats = [
         { label: 'Total Transactions', value: payments.length },
         { label: 'Total Collected', value: fmt(revenue) }
@@ -2218,7 +2223,7 @@ async function viewReport(type) {
           <tbody>
             ${payments.map(p => {
               const c = clients.find(cl => cl.id === p.waybill);
-              return `<tr><td class="mono">${p.txId}</td><td class="mono">${p.waybill}</td><td>${c ? c.client : '—'}</td><td>${fmt(p.amount)}</td><td>${p.method}</td><td>${p.date}</td></tr>`;
+              return `<tr><td class="mono">${p.txid || p.txId || 'N/A'}</div><td class="mono">${p.waybill || ''}</div><td>${c ? c.client : '—'}</div><td>${fmt(p.amount)}</div><td>${p.method || ''}</div><td>${p.date || ''}</div></tr>`;
             }).join('')}
           </tbody>
         </table>
@@ -2226,7 +2231,7 @@ async function viewReport(type) {
     }
     else if (type === 'maintenance-report') {
       titleEl.textContent = 'Maintenance Cost Report';
-      const totalCost = maintenance.reduce((s,m)=>s+(m.total||0),0);
+      const totalCost = maintenance.reduce((s,m) => s + (parseFloat(m.total) || 0), 0);
       const stats = [
         { label: 'Total Records', value: maintenance.length },
         { label: 'Total Cost', value: fmt(totalCost) }
@@ -2237,15 +2242,18 @@ async function viewReport(type) {
         <table class="report-table">
           <thead><tr><th>Ref #</th><th>Truck</th><th>Type</th><th>Parts</th><th>Labor</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            ${maintenance.map(m => `<tr><td class="mono">${m.id}</td><td>${m.truck}</td><td>${m.type}</td><td>${fmt(m.parts)}</td><td>${fmt(m.labor)}</td><td>${fmt(m.total)}</td><td>${fmtDate(m.completedDate || m.reqDate)}</td><td>${m.status}</td></tr>`).join('')}
+            ${maintenance.map(m => {
+              const displayDate = m.completeddate ? fmtDate(m.completeddate) : (m.reqdate ? fmtDate(m.reqdate) : '—');
+              return `<tr><td class="mono">${m.id || 'N/A'}</div><td>${m.truck || ''}</div><td>${m.type || ''}</div><td>${fmt(m.parts)}</div><td>${fmt(m.labor)}</div><td>${fmt(parseFloat(m.total) || 0)}</div><td>${displayDate}</div><td>${m.status || ''}</div></tr>`;
+            }).join('')}
           </tbody>
         </table>
         ${footer}`;
     }
     else if (type === 'revenue-summary') {
       titleEl.textContent = 'Revenue & Profit Summary';
-      const revenue = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
-      const maintCost = maintenance.reduce((s,m)=>s+(m.total||0),0);
+      const revenue = payments.reduce((s,p) => s + parseFloat(p.amount || 0), 0);
+      const maintCost = maintenance.reduce((s,m) => s + (parseFloat(m.total) || 0), 0);
       const net = revenue - maintCost;
       const stats = [
         { label: 'Gross Revenue', value: fmt(revenue) },
