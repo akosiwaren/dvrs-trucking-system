@@ -1257,11 +1257,15 @@ function printReceipt() {
 }
 
 function showReceipt(txId) {
+  console.log('Looking for transaction with txId:', txId);
+  console.log('All payments:', allPayments);
+  
   const transaction = allPayments.find(p => p.txId === txId);
   if (!transaction) {
     toast('Transaction not found', 'error');
     return;
   }
+  
   const client = allClients.find(c => c.id === transaction.waybill);
   const clientName = client ? client.client : '—';
   
@@ -1423,28 +1427,41 @@ function viewWaybill(waybillId) {
     amountInput.value = client ? client.amount : '';
   }
   
-  async function postTransaction() {
-    const waybill = document.getElementById('tx-waybill').value;
-    const amount = parseFloat(document.getElementById('tx-amount').value || 0);
-    if (!waybill || amount <= 0) { alert("Select waybill and amount"); return; }
-    const txData = {
-      txId: 'TX-' + Date.now(),
-      waybill: waybill,
-      amount: amount,
-      method: document.getElementById('tx-method').value,
-      date: document.getElementById('tx-date').value,
-      remarks: document.getElementById('tx-remarks').value,
-      postedBy: "Office Staff"
-    };
-    try {
-      const response = await fetch('https://dvrs-trucking-system.onrender.com/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(txData) });
-      if (response.ok) {
-        alert("✅ Payment Posted!");
-        await syncWithBackend();
-        clearTxForm();
-      }
-    } catch(err) { alert("Error"); }
+async function postTransaction() {
+  const waybill = document.getElementById('tx-waybill').value;
+  const amount = parseFloat(document.getElementById('tx-amount').value || 0);
+  if (!waybill || amount <= 0) { 
+    toast("Select waybill and amount", "error");
+    return; 
   }
+  
+  const txData = {
+    txId: 'TX-' + Date.now(),
+    waybill: waybill,
+    amount: amount,
+    method: document.getElementById('tx-method').value,
+    date: document.getElementById('tx-date').value,
+    remarks: document.getElementById('tx-remarks').value,
+    postedBy: "Office Staff"
+  };
+  
+  try {
+    const response = await fetch('https://dvrs-trucking-system.onrender.com/api/payments', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(txData) 
+    });
+    if (response.ok) {
+      toast("✅ Payment Posted!", "success");
+      await syncWithBackend();
+      clearTxForm();
+    } else {
+      toast("❌ Payment failed", "error");
+    }
+  } catch(err) { 
+    toast("❌ Error posting payment", "error");
+  }
+}
   
   function clearTxForm() {
     document.getElementById('tx-waybill').value = '';
