@@ -2343,12 +2343,8 @@ async function generateCustomReport() {
       let csvContent = '';
 
       if (reportType === 'combined-trip-dispatch') {
-        csvContent = 'Trip ID,Client,Driver,Truck,Route,Date,Status\n' +
-          dispatches.map(d => {
-            const client = clients.find(c => c.id === d.waybillid);
-            const clientName = client ? client.client : '—';
-            return `"${d.tripid || ''}","${clientName}","${d.driver || ''}","${d.truck || ''}","${d.origin || ''} → ${d.destination || ''}","=\"${d.date || ''}","${d.status || ''}"`;
-          }).join('\n');
+        csvContent = 'Trip ID,Driver,Truck,Route,Date,Status\n' +
+          dispatches.map(d => `"${d.tripid || d.id}","${d.driver || ''}","${d.truck || ''}","${d.origin || ''} → ${d.destination || ''}","=\"${d.date || ''}","${d.status || ''}"`).join('\n');
       }
       else if (reportType === 'transaction-log') {
         csvContent = 'Tx ID,Waybill,Client,Amount,Method,Date\n' +
