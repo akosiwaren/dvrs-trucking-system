@@ -1511,16 +1511,31 @@ async function postTransaction() {
     });
   }
   
+  // Get waybill IDs that are paid (have transactions)
+  const paidWaybillIds = new Set();
+  if (allPayments && allPayments.length) {
+    allPayments.forEach(payment => {
+      if (payment.waybill) {
+        paidWaybillIds.add(payment.waybill);
+      }
+    });
+  }
+  
   console.log("All dispatched waybill IDs:", [...allDispatchedWaybillIds]);
+  console.log("Paid waybill IDs:", [...paidWaybillIds]);
   
   // Clear existing options
   dp.innerHTML = '<option value="">— select waybill —</option>';
   
   if(allClients && allClients.length) {
-    // Filter out waybills that have ANY dispatch (including Delivered/Returned)
-    const availableWaybills = allClients.filter(client => !allDispatchedWaybillIds.has(client.id));
+    // Filter: not dispatched AND paid (has payment)
+    const availableWaybills = allClients.filter(client => {
+      const notDispatched = !allDispatchedWaybillIds.has(client.id);
+      const isPaid = paidWaybillIds.has(client.id);
+      return notDispatched && isPaid;
+    });
     
-    console.log("Available waybills (no dispatch at all):", availableWaybills.length);
+    console.log("Available waybills (not dispatched and paid):", availableWaybills.length);
     
     availableWaybills.forEach(c => {
       const opt = document.createElement('option');
