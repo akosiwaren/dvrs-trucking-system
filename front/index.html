@@ -2335,7 +2335,7 @@ async function generateCustomReport() {
         payments = payments.filter(p => p.date >= dateFrom && p.date <= dateTo);
         dispatches = dispatches.filter(d => d.date >= dateFrom && d.date <= dateTo);
         maintenance = maintenance.filter(m => {
-          const recordDate = m.completeddate || m.reqdate;
+          const recordDate = m.completedDate || m.reqDate;
           return recordDate >= dateFrom && recordDate <= dateTo;
         });
       }
@@ -2347,19 +2347,19 @@ async function generateCustomReport() {
           dispatches.map(d => {
             const client = clients.find(c => c.id === d.waybillid);
             const clientName = client ? client.client : '—';
-            return `"${d.tripid || ''}","${clientName}","${d.driver || ''}","${d.truck || ''}","${d.origin || ''} → ${d.destination || ''}","${d.date || ''}","${d.status || ''}"`;
+            return `"${d.tripid || ''}","${clientName}","${d.driver || ''}","${d.truck || ''}","${d.origin || ''} → ${d.destination || ''}","=\"${d.date || ''}","${d.status || ''}"`;
           }).join('\n');
       }
       else if (reportType === 'transaction-log') {
         csvContent = 'Tx ID,Waybill,Client,Amount,Method,Date\n' +
           payments.map(p => {
             const c = clients.find(cl => cl.id === p.waybill);
-            return `"${p.txid || p.txId || ''}","${p.waybill || ''}","${c ? c.client : '—'}","${p.amount || 0}","${p.method || ''}","${p.date || ''}"`;
+            return `"${p.txid || p.txId || ''}","${p.waybill || ''}","${c ? c.client : '—'}","${p.amount || 0}","${p.method || ''}","=\"${p.date || ''}\"`;
           }).join('\n');
       }
       else if (reportType === 'maintenance-report') {
         csvContent = 'Ref #,Truck,Type,Parts,Labor,Total,Date,Status\n' +
-          maintenance.map(m => `"${m.id || ''}","${m.truck || ''}","${m.type || ''}","${m.parts || 0}","${m.labor || 0}","${m.total || 0}","${m.completeddate || m.reqdate || ''}","${m.status || ''}"`).join('\n');
+          maintenance.map(m => `"${m.id || ''}","${m.truck || ''}","${m.type || ''}","${m.parts || 0}","${m.labor || 0}","${m.total || 0}","=\"${m.completedDate || m.reqDate || ''}\","${m.status || ''}"`).join('\n');
       }
       else if (reportType === 'revenue-summary') {
         const revenue = payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
