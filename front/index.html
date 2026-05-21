@@ -1618,7 +1618,7 @@ async function postTransaction() {
 document.getElementById('disp-today').innerText = data.filter(d => d.date === todayStr).length;
 document.getElementById('disp-onroute').innerText = data.filter(d => d.status === 'Approved' || d.status === 'Dispatched').length;
 document.getElementById('disp-done').innerText = data.filter(d => d.status === 'Delivered' || d.status === 'Returned').length;
-   
+
     // Update trip report dropdown and status dropdown
     const tripSelect = document.getElementById('tr-trip-id');
     const statusSelect = document.getElementById('tr-status');
@@ -1631,7 +1631,7 @@ document.getElementById('disp-done').innerText = data.filter(d => d.status === '
       data.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.tripid;
-        opt.textContent = `${d.tripid} — ${d.driver} (${d.truck}) - Current: ${d.status}`;
+        opt.textContent = `${d.tripid} — ${d.driver} (${d.truck}) - ${d.status}`;
         tripSelect.appendChild(opt);
       });
       
@@ -1652,24 +1652,35 @@ document.getElementById('disp-done').innerText = data.filter(d => d.status === '
 function updateStatusDropdown() {
   const tripSelect = document.getElementById('tr-trip-id');
   const statusSelect = document.getElementById('tr-status');
-  const selectedTripId = tripSelect.value;
   
-  if (!statusSelect) return;
+  if (!statusSelect || !tripSelect) return;
   
-  if (!selectedTripId) {
+  const selectedOption = tripSelect.options[tripSelect.selectedIndex];
+  
+  if (!tripSelect.value || !selectedOption) {
     statusSelect.innerHTML = '<option value="">Select a trip first</option>';
     return;
   }
   
-  // Find the selected trip from allDispatches
-  const selectedTrip = allDispatches.find(d => d.tripid === selectedTripId);
+  // Extract status from the option text (e.g., "TRP-5512 — Driver (Truck) - Approved")
+  const optionText = selectedOption.textContent;
+  let currentStatus = '';
   
-  if (!selectedTrip) {
-    statusSelect.innerHTML = '<option value="">Trip not found</option>';
-    return;
+  if (optionText.includes('Approved')) {
+    currentStatus = 'Approved';
+  } else if (optionText.includes('Dispatched')) {
+    currentStatus = 'Dispatched';
+  } else if (optionText.includes('Delivered')) {
+    currentStatus = 'Delivered';
+  } else if (optionText.includes('Returned')) {
+    currentStatus = 'Returned';
   }
   
-  const currentStatus = selectedTrip.status;
+  // If not found in text, try to find in allDispatches as fallback
+  if (!currentStatus) {
+    const found = allDispatches.find(d => d.tripid === tripSelect.value);
+    currentStatus = found ? found.status : '';
+  }
   
   // Clear and rebuild status dropdown
   statusSelect.innerHTML = '';
@@ -1681,16 +1692,14 @@ function updateStatusDropdown() {
   currentOption.disabled = true;
   statusSelect.appendChild(currentOption);
   
-  // Add available status options based on current status
+  // Add available options based on current status
   if (currentStatus === 'Approved') {
-    // If Approved, driver can change to Dispatched
     const dispatchedOption = document.createElement('option');
     dispatchedOption.value = 'Dispatched';
     dispatchedOption.textContent = 'Dispatched';
     statusSelect.appendChild(dispatchedOption);
   } 
   else if (currentStatus === 'Dispatched') {
-    // If Dispatched, driver can change to Delivered or Returned
     const deliveredOption = document.createElement('option');
     deliveredOption.value = 'Delivered';
     deliveredOption.textContent = 'Delivered';
@@ -1702,13 +1711,11 @@ function updateStatusDropdown() {
     statusSelect.appendChild(returnedOption);
   }
   else if (currentStatus === 'Delivered') {
-    // If Delivered, only show Returned (if needed)
     const returnedOption = document.createElement('option');
     returnedOption.value = 'Returned';
     returnedOption.textContent = 'Returned';
     statusSelect.appendChild(returnedOption);
   }
-  // For 'Returned' or other statuses, no further options
 }
   
   async function submitTripReport() {
