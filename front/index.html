@@ -1389,6 +1389,9 @@ function viewWaybill(waybillId) {
     try {
       const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
       const records = await maintRes.json();
+
+      const totalCost = records.reduce((s, m) => s + (parseFloat(m.total) || 0), 0);
+
       document.getElementById('dash-maint').innerText = records.length;
       const maintList = document.getElementById('dash-maint-list');
       if (records.length === 0) maintList.innerHTML = '<li class="tl-item">No maintenance records</li>';
@@ -2072,21 +2075,22 @@ function toggleOtherIssueType() {
   // REPORTS
   // ============================================================
   async function refreshReportStats() {
-    try {
-      const [clients, payments, dispatches, maintenance] = await Promise.all([
-        fetch('https://dvrs-trucking-system.onrender.com/api/clients').then(r=>r.json()),
-        fetch('https://dvrs-trucking-system.onrender.com/api/payments').then(r=>r.json()),
-        fetch('https://dvrs-trucking-system.onrender.com/api/dispatches').then(r=>r.json()),
-        fetch('https://dvrs-trucking-system.onrender.com/api/maintenance').then(r=>r.json())
-      ]);
-      const revenue = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
-      const maintCost = maintenance.reduce((s,m)=>s+(m.total||0),0);
-      document.getElementById('rp-revenue').innerText = fmt(revenue);
-      document.getElementById('rp-trips').innerText = dispatches.length;
-      document.getElementById('rp-maint').innerText = fmt(maintCost);
-      document.getElementById('rp-waybills').innerText = clients.length;
-    } catch(e) { console.error(e); }
-  }
+  try {
+    const [clients, payments, dispatches, maintenance] = await Promise.all([
+      fetch('https://dvrs-trucking-system.onrender.com/api/clients').then(r=>r.json()),
+      fetch('https://dvrs-trucking-system.onrender.com/api/payments').then(r=>r.json()),
+      fetch('https://dvrs-trucking-system.onrender.com/api/dispatches').then(r=>r.json()),
+      fetch('https://dvrs-trucking-system.onrender.com/api/maintenance').then(r=>r.json())
+    ]);
+    const revenue = payments.reduce((s,p) => s + parseFloat(p.amount||0), 0);
+    // Fix: convert total to number using parseFloat
+    const maintCost = maintenance.reduce((s,m) => s + (parseFloat(m.total) || parseFloat(m.total) || 0), 0);
+    document.getElementById('rp-revenue').innerText = fmt(revenue);
+    document.getElementById('rp-trips').innerText = dispatches.length;
+    document.getElementById('rp-maint').innerText = fmt(maintCost);
+    document.getElementById('rp-waybills').innerText = clients.length;
+  } catch(e) { console.error(e); }
+}
 
   async function refreshTripDropdown() {
   await loadDispatches(); // reuse
