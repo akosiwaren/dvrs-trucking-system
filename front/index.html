@@ -1498,18 +1498,47 @@ async function postTransaction() {
   // DISPATCH
   // ============================================================
   function populateDispatchWaybillDropdown() {
-    const dp = document.getElementById('dp-waybill');
-    if(!dp) return;
-    dp.innerHTML = '<option value="">— select waybill —</option>';
-    if(allClients && allClients.length) {
-      allClients.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = `${c.id} – ${c.client} (${c.origin||''} → ${c.dest||''})`;
-        dp.appendChild(opt);
-      });
-    }
+  const dp = document.getElementById('dp-waybill');
+  if(!dp) return;
+  
+  // Get waybill IDs that are already in active dispatches (not Delivered or Returned)
+  const activeDispatchWaybillIds = new Set();
+  if (allDispatches && allDispatches.length) {
+    allDispatches.forEach(dispatch => {
+      // If dispatch is not completed/finalized, mark its waybill as unavailable
+      if (dispatch.status !== 'Delivered' && dispatch.status !== 'Returned') {
+        if (dispatch.waybillid) {
+          activeDispatchWaybillIds.add(dispatch.waybillid);
+        }
+      }
+    });
   }
+  
+  console.log("Active waybills (already dispatched):", [...activeDispatchWaybillIds]);
+  
+  // Clear existing options
+  dp.innerHTML = '<option value="">— select waybill —</option>';
+  
+  if(allClients && allClients.length) {
+    // Filter out waybills that already have an active dispatch
+    const availableWaybills = allClients.filter(client => !activeDispatchWaybillIds.has(client.id));
+    
+    console.log("Available waybills:", availableWaybills.length);
+    
+    availableWaybills.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.id} – ${c.client} (${c.origin||''} → ${c.dest||''})`;
+      dp.appendChild(opt);
+    });
+    
+    if (availableWaybills.length === 0) {
+      dp.innerHTML = '<option value="">— No available waybills —</option>';
+    }
+  } else {
+    dp.innerHTML = '<option value="">— No waybills available —</option>';
+  }
+}
   
   function autoFillDispatchFields() {
     const selected = document.getElementById('dp-waybill').value;
@@ -1564,6 +1593,7 @@ async function postTransaction() {
       toast("✅ Dispatch issued and Approved!"); 
       clearDispatchForm(); 
       await loadDispatches(); 
+      populateDispatchWaybillDropdown();
     } else toast("Failed", "error");
   } catch(e) { 
     toast("Server error", "error"); 
@@ -2280,6 +2310,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadDispatches();
   await loadMaintenanceRecords();
   await updateDashboardStats();
+  populateDispatchWaybillDropdown();
   const dispatchWaybill = document.getElementById('dp-waybill');
   if(dispatchWaybill) dispatchWaybill.addEventListener('change', autoFillDispatchFields);
   const txWaybill = document.getElementById('tx-waybill');
