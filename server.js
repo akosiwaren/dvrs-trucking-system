@@ -182,18 +182,18 @@ app.get('/api/dispatches', async (req, res) => {
     const result = await pool.query('SELECT * FROM dispatches ORDER BY date DESC');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching dispatches:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/dispatches', async (req, res) => {
-  const { tripid, waybillId, driver, truck, origin, destination, date, status, notes, clientName, departureTime, arrivalTime, tripNotes } = req.body;
+  const { tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes } = req.body;
   try {
     await pool.query(
       `INSERT INTO dispatches (tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [tripId, waybillId, driver, truck, origin, destination, date, status, notes, clientName, departureTime, arrivalTime, tripNotes]
+      [tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes]
     );
     res.status(201).json(req.body);
   } catch (err) {
@@ -203,7 +203,7 @@ app.post('/api/dispatches', async (req, res) => {
 });
 
 app.put('/api/dispatches/:tripid', async (req, res) => {
-  const { tripid } = req.params;
+  const { tripid } = req.params;  // ← Note: tripid (lowercase), not tripId
   const { status, departuretime, arrivaltime, tripnotes } = req.body;
   
   try {
