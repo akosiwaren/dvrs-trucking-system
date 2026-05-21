@@ -2167,10 +2167,15 @@ async function viewReport(type) {
     ]);
     
     const summaryBlock = (stats) => `
-      <div class="report-summary-row">
-        ${stats.map(s => `<div class="summary-item"><span class="summary-label">${s.label}</span><span class="summary-value">${s.value}</span></div>`).join('')}
+  <div style="display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: space-around; align-items: center; gap: 10px; margin: 15px 0; background: var(--gray-50); padding: 10px 15px; border-radius: var(--radius); overflow-x: auto;">
+    ${stats.map(s => `
+      <div style="text-align: center; flex: 1; white-space: nowrap;">
+        <div style="font-size: 11px; color: var(--text-tertiary);">${s.label}</div>
+        <div style="font-size: 20px; font-weight: 600; color: var(--text);">${s.value}</div>
       </div>
-    `;
+    `).join('')}
+  </div>
+`;
     
     let html = '';
     let header = `<div class="report-header">
