@@ -1140,52 +1140,60 @@ function getStatusBadge(status) {
     
     // All client requests table
     const clientTable = document.getElementById('clients-table');
-    if (clientTable) {
-      document.getElementById('cl-count').innerText = allClients.length;
-      if (allClients.length === 0) clientTable.innerHTML = '<tr><td colspan="8">No requests</div></div>';
-      else {
-        const sortedClients = [...allClients].sort((a, b) => new Date(b.date) - new Date(a.date));
-        clientTable.innerHTML = sortedClients.map(req => {
-          const isPaid = paidWaybillIds.has(req.id);
-          const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
-          const statusClass = isPaid ? 'badge-green' : 'badge-amber';
-          return `<tr>
-            <td class="mono"><strong>${req.id}</strong></td>
-            <td>${req.client}</td>
-            <td>${req.service}</td>
-            <td>${req.origin||''} → ${req.dest||''}</td>
-            <td>${req.date||''}</td>
-            <td>₱${parseFloat(req.amount||0).toLocaleString()}</td>
-            <td><span class="badge ${statusClass}">${statusText}</span></td>
-            <td><button class="btn-sm" onclick="viewWaybill('${req.id}')">View</button></td>
-          </tr>`;
-        }).join('');
-      }
-    }
+if (clientTable) {
+  document.getElementById('cl-count').innerText = allClients.length;
+  if (allClients.length === 0) {
+    clientTable.innerHTML = '<tr><td colspan="8">No requests</div></div>';
+  } else {
+    // Sort by date (newest first)
+    const sortedClients = [...allClients].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    clientTable.innerHTML = sortedClients.map(req => {
+      const isPaid = paidWaybillIds.has(req.id);
+      const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
+      const statusClass = isPaid ? 'badge-green' : 'badge-amber';
+      return `<tr>
+        <td class="mono"><strong>${req.id}</strong></div>
+        <td>${req.client}</div>
+        <td>${req.service}</div>
+        <td>${req.origin||''} → ${req.dest||''}</div>
+        <td>${req.date||''}</div>
+        <td>₱${parseFloat(req.amount||0).toLocaleString()}</div>
+        <td><span class="badge ${statusClass}">${statusText}</span></div>
+        <td><button class="btn-sm" onclick="viewWaybill('${req.id}')">View</button></div>
+      <tr>`;
+    }).join('');
+  }
+}
+
     
     // Transactions table
-    const txTable = document.getElementById('transactions-table');
-    if (txTable) {
-      document.getElementById('tx-count').innerText = payments.length;
-      if (payments.length === 0) txTable.innerHTML = '<td><td colspan="9">No transactions</div></div>';
-      else {
-        const sortedPayments = [...payments].sort((a, b) => new Date(b.date) - new Date(a.date));
-        txTable.innerHTML = sortedPayments.map(p => {
-          const client = allClients.find(c => c.id === p.waybill);
-          return `<tr>
-            <td class="mono">${p.txid || p.txId || '???'}</td>
-            <td class="mono">${p.waybill}</td>
-            <td>${client ? client.client : '—'}</td>
-            <td>₱${parseFloat(p.amount||0).toLocaleString()}</td>
-            <td><span class="badge badge-gray">${p.method}</span></td>
-            <td>${p.date}</td>
-            <td>${p.remarks||'—'}</td>
-            <td>${p.postedBy||'Office'}</td>
-            <td><button class="btn-sm" onclick="showReceipt('${p.txid}')">Receipt</button></td>
-          </tr>`;
-        }).join('');
-      }
-    }
+    // Transactions table – newest first
+const txTable = document.getElementById('transactions-table');
+if (txTable) {
+  document.getElementById('tx-count').innerText = payments.length;
+  if (payments.length === 0) {
+    txTable.innerHTML = '<tr><td colspan="9">No transactions</div></div>';
+  } else {
+    // Sort by date (newest first)
+    const sortedPayments = [...payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    txTable.innerHTML = sortedPayments.map(p => {
+      const client = allClients.find(c => c.id === p.waybill);
+      return `</td>
+        <td class="mono">${p.txid || p.txId || '???'}</div>
+        <td class="mono">${p.waybill}</div>
+        <td>${client ? client.client : '—'}</div>
+        <td>₱${parseFloat(p.amount||0).toLocaleString()}</div>
+        <td><span class="badge badge-gray">${p.method}</span></div>
+        <td>${p.date}</div>
+        <td>${p.remarks||'—'}</div>
+        <td>${p.postedBy||'Office'}</div>
+        <td><button class="btn-sm" onclick="showReceipt('${p.txid || p.txId}')">Receipt</button></div>
+      </tr>`;
+    }).join('');
+  }
+}
     
     // Transaction summary numbers
     const totalCollected = payments.reduce((s,p) => s + parseFloat(p.amount||0), 0);
@@ -1647,7 +1655,7 @@ function populateDispatchWaybillDropdown() {
       table.innerHTML = '<tr><td colspan="8">No dispatches</div></div>';
     } else {
       const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
-      
+    
       table.innerHTML = sortedData.map(d => {
         const client = allClients.find(c => c.id === d.waybillid);
         const clientName = client ? client.client : d.waybillid || '—';
