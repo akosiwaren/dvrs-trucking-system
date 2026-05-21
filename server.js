@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'https://dvrss.netlify.app' // or use '*' for development
+  origin: 'https://dvrss.onrender.com' // or use '*' for development
 }));
 app.use(express.json());
 
