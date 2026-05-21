@@ -1822,12 +1822,16 @@ async function postTransaction() {
 }
 
 function viewTrip(tripId) {
+  console.log('Looking for trip:', tripId);
+  
+  // Find the trip by tripid
   const trip = allDispatches.find(t => t.tripid === tripId);
   if (!trip) {
     toast('Trip not found', 'error');
     return;
   }
 
+  // Find client using waybillid
   const client = allClients.find(c => c.id === trip.waybillid);
   const clientName = client ? client.client : '—';
 
