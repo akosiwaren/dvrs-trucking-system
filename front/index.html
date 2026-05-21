@@ -1167,7 +1167,7 @@
               <td>${p.date}</td>
               <td>${p.remarks||'—'}</td>
               <td>${p.postedBy||'Office'}</td>
-              <td><button class="btn-sm" onclick="showReceipt('${p.txId}')">Receipt</button></td>
+              <td><button class="btn-sm" onclick="showReceipt('${p.txid}')">Receipt</button></td>
             </tr>`;
           }).join('');
         }
@@ -1260,11 +1260,13 @@ function showReceipt(txId) {
   console.log('Looking for transaction with txId:', txId);
   console.log('All payments:', allPayments);
   
-  const transaction = allPayments.find(p => p.txid === txIdFromButton);
+  // Use txid (lowercase) – match the database column name
+  const transaction = allPayments.find(p => p.txid === txId);
   if (!transaction) {
     toast('Transaction not found', 'error');
     return;
   }
+  
   const client = allClients.find(c => c.id === transaction.waybill);
   const clientName = client ? client.client : '—';
   
@@ -1276,14 +1278,14 @@ function showReceipt(txId) {
         <p>Official Payment Receipt</p>
       </div>
       <div class="receipt-details">
-        <div><strong>Receipt No:</strong> ${transaction.txId}</div>
+        <div><strong>Receipt No:</strong> ${transaction.txid}</div>
         <div><strong>Date:</strong> ${transaction.date}</div>
         <div><strong>Waybill ID:</strong> ${transaction.waybill}</div>
         <div><strong>Client:</strong> ${clientName}</div>
         <div><strong>Amount Paid:</strong> ${fmt(transaction.amount)}</div>
         <div><strong>Payment Method:</strong> ${transaction.method}</div>
         <div><strong>Remarks:</strong> ${transaction.remarks || '—'}</div>
-        <div><strong>Processed by:</strong> ${transaction.postedBy || 'Office Staff'}</div>
+        <div><strong>Processed by:</strong> ${transaction.postedby || 'Office Staff'}</div>
       </div>
       <div class="receipt-footer">
         Thank you for your payment.<br>
