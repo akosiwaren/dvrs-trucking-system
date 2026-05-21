@@ -196,6 +196,12 @@
   border-bottom: 1px solid var(--border-light);
 }
 
+.maintenance-detail > div {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
   /* REPORT PREVIEW */
   .report-preview { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; font-size: 12px; }
   .report-preview h2 { font-size: 15px; margin-bottom: 4px; color: var(--brand); }
@@ -998,6 +1004,7 @@
   let allClients = [];
   let allDispatches = [];
   let allPayments = [];
+  let allMaintenance = [];
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -1823,48 +1830,120 @@ function updateStatusDropdown() {
   // ============================================================
   // MAINTENANCE
   // ============================================================
-  async function loadMaintenanceRecords() {
-    try {
-      const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
-      const records = await res.json();
-      const table = document.getElementById('maintenance-table');
-      const count = document.getElementById('mt-count');
-      if(count) count.innerText = records.length;
-      if(!table) return;
-      if(records.length === 0) table.innerHTML = '<tr><td colspan="11">No records</td></tr>';
-      else {
-              const sortedRecords = [...records].sort((a, b) => new Date(b.reqdate) - new Date(a.reqdate));
-        table.innerHTML = records.slice().reverse().map(m => `
+ async function loadMaintenanceRecords() {
+  try {
+    const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
+    const records = await res.json();
+    
+    allMaintenance = records;
+    
+    const table = document.getElementById('maintenance-table');
+    const count = document.getElementById('mt-count');
+    if(count) count.innerText = records.length;
+    if(!table) return;
+    
+    if(records.length === 0) {
+      table.innerHTML = '<tr><td colspan="11">No records</div></div>';
+    } else {
+      // Sort by date (newest first)
+      const sortedRecords = [...records].sort((a, b) => new Date(b.reqdate) - new Date(a.reqdate));
+      
+      table.innerHTML = sortedRecords.map(m => {
+        // Format the date properly
+        const displayDate = m.completedDate ? fmtDate(m.completedDate) : (m.reqdate ? fmtDate(m.reqdate) : '—');
+        
+        return `
           <tr>
-            <td class="mono">${m.id}</td>
-            <td>${m.truck}</td>
-            <td>${m.type}</td>
-            <td>${m.provider || 'TBA'}</td>
-            <td><span class="badge ${m.priority === 'Critical' ? 'badge-red' : (m.priority === 'Urgent' ? 'badge-amber' : 'badge-gray')}">${m.priority || 'Normal'}</span></td>
-            <td>${m.parts ? fmt(m.parts) : '—'}</td>
-            <td>${m.labor ? fmt(m.labor) : '—'}</td>
-            <td>${m.total ? fmt(m.total) : '—'}</td>
-            <td>${fmtDate(m.completedDate || m.reqDate)}</td>
-            <td>${badgeForStatus(m.status)}</td>
-            <td><button class="btn-sm btn-danger" onclick="deleteMaintRecord('${m.id}')">Del</button></td>
+            <td class="mono">${m.id || 'N/A'}</div>
+            <td>${m.truck || '—'}</div>
+            <td>${m.type || '—'}</div>
+            <td style="font-size:11.5px;">${m.provider || 'TBA'}</div>
+            <td><span class="badge ${m.priority === 'Critical' ? 'badge-red' : (m.priority === 'Urgent' ? 'badge-amber' : 'badge-gray')}">${m.priority || 'Normal'}</span></div>
+            <td>${m.parts ? fmt(m.parts) : '—'}</div>
+            <td>${m.labor ? fmt(m.labor) : '—'}</div>
+            <td>${m.total ? fmt(m.total) : '—'}</div>
+            <td>${displayDate}</div>
+            <td>${badgeForStatus(m.status)}</div>
+            <td>
+              <button class="btn-sm" onclick="viewMaintenanceRecord('${m.id}')">View</button>
+              <button class="btn-sm btn-danger" onclick="deleteMaintRecord('${m.id}')">Del</button>
+            </td>
           </tr>
-        `).join('');
-      }
-      // Update service ref dropdown
-      const sel = document.getElementById('sr-ref');
-      if(sel) {
-        const pending = records.filter(m => m.status !== 'Completed');
-        sel.innerHTML = '<option value="">— select record —</option>';
-        pending.forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = m.id;
-          opt.textContent = `${m.id} — ${m.truck} (${m.type})`;
-          sel.appendChild(opt);
-        });
-      }
-      return records;
-    } catch(e) { console.error(e); return []; }
+        `;
+      }).join('');
+    }
+    
+    // Update service ref dropdown
+    const sel = document.getElementById('sr-ref');
+    if(sel) {
+      const pending = records.filter(m => m.status !== 'Completed');
+      sel.innerHTML = '<option value="">— select record —</option>';
+      pending.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.id} — ${m.truck} (${m.type})`;
+        sel.appendChild(opt);
+      });
+    }
+    return records;
+  } catch(e) { console.error(e); return []; }
+}
+
+function viewMaintenanceRecord(recordId) {
+  const record = allMaintenance.find(m => m.id === recordId);
+  if (!record) {
+    toast('Record not found', 'error');
+    return;
   }
+  
+  const displayDate = record.completedDate ? fmtDate(record.completedDate) : (record.reqdate ? fmtDate(record.reqdate) : '—');
+  
+  const modalBody = document.getElementById('waybill-modal-body'); // Reuse waybill modal or create a new one
+  
+  // Use a generic modal or create a maintenance modal
+  let maintModal = document.getElementById('maintenance-modal');
+  if (!maintModal) {
+    // Create maintenance modal if it doesn't exist
+    const modalHtml = `
+      <div class="modal-overlay" id="maintenance-modal">
+        <div class="modal" style="max-width: 500px;">
+          <div class="modal-title">
+            <span>Maintenance Record Details</span>
+            <span class="modal-close no-print" onclick="closeMaintenanceModal()">✕</span>
+          </div>
+          <div id="maintenance-modal-body"></div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    maintModal = document.getElementById('maintenance-modal');
+  }
+  
+  const modalBodyDiv = document.getElementById('maintenance-modal-body');
+  modalBodyDiv.innerHTML = `
+    <div class="maintenance-detail">
+      <div><strong>Reference #:</strong> ${record.id || '—'}</div>
+      <div><strong>Truck:</strong> ${record.truck || '—'}</div>
+      <div><strong>Service Type:</strong> ${record.type || '—'}</div>
+      <div><strong>Provider:</strong> ${record.provider || 'TBA'}</div>
+      <div><strong>Priority:</strong> ${record.priority || 'Normal'}</div>
+      <div><strong>Request Date:</strong> ${record.reqdate ? fmtDate(record.reqdate) : '—'}</div>
+      <div><strong>Completion Date:</strong> ${record.completedDate ? fmtDate(record.completedDate) : '—'}</div>
+      <div><strong>Parts Cost:</strong> ${fmt(record.parts)}</div>
+      <div><strong>Labor Cost:</strong> ${fmt(record.labor)}</div>
+      <div><strong>Total Cost:</strong> ${fmt(record.total)}</div>
+      <div><strong>Status:</strong> ${badgeForStatus(record.status)}</div>
+      <div><strong>Description:</strong> ${record.description || '—'}</div>
+      <div><strong>Work Done:</strong> ${record.workDone || '—'}</div>
+    </div>
+  `;
+  maintModal.classList.add('open');
+}
+
+function closeMaintenanceModal() {
+  const modal = document.getElementById('maintenance-modal');
+  if (modal) modal.classList.remove('open');
+}
   
   async function sendServiceRequest() {
     const reqDate = document.getElementById('mt-req-date').value;
@@ -2371,6 +2450,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.closeReceiptModal = closeReceiptModal;
   window.printReceipt = printReceipt;
   window.deleteMaintRecord = deleteMaintRecord;
+  window.viewMaintenanceRecord = viewMaintenanceRecord;
+ window.closeMaintenanceModal = closeMaintenanceModal;
+
 </script>
 </body>
 </html>
