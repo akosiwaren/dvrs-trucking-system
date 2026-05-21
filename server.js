@@ -252,7 +252,11 @@ app.post('/api/maintenance', async (req, res) => {
     await pool.query(
       `INSERT INTO maintenance (id, truck, type, reqdate, priority, provider, estcost, description, status, parts, labor, total, completeddate, workdone, createdat)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-      [id, truck, type, reqDate, priority, provider, estCost, description, status, parts || 0, labor || 0, total || 0, completedDate, workDone, createdAt]
+      [id, truck, type, reqDate, priority, provider, estCost, description, status, 
+       parseFloat(parts) || 0,    // ← Convert to number
+       parseFloat(labor) || 0,    // ← Convert to number
+       (parseFloat(parts) || 0) + (parseFloat(labor) || 0),  // ← Calculate as number
+       completedDate, workDone, createdAt]
     );
     res.status(201).json(req.body);
   } catch (err) {
