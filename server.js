@@ -203,21 +203,16 @@ app.post('/api/dispatches', async (req, res) => {
 });
 
 app.put('/api/dispatches/:tripid', async (req, res) => {
-  const { tripid } = req.params;  // ← Note: tripid (lowercase), not tripId
+  const { tripid } = req.params;
   const { status, departuretime, arrivaltime, tripnotes } = req.body;
   
   try {
-    const result = await pool.query(
+    await pool.query(
       `UPDATE dispatches 
        SET status = $1, departuretime = $2, arrivaltime = $3, tripnotes = $4
        WHERE tripid = $5`,
       [status, departuretime, arrivaltime, tripnotes, tripid]
     );
-    
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Trip not found' });
-    }
-    
     res.json({ message: 'Updated' });
   } catch (err) {
     console.error(err);

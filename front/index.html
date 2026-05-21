@@ -1634,6 +1634,9 @@ async function postTransaction() {
   const tripSelect = document.getElementById('tr-trip-id');
   const tripId = tripSelect.value;
   const status = document.getElementById('tr-status').value;
+  const departure = document.getElementById('tr-depart').value;
+  const arrival = document.getElementById('tr-arrive').value;
+  const notes = document.getElementById('tr-notes').value;
   
   if(!tripId) { 
     toast("Select a trip", "error"); 
@@ -1642,10 +1645,12 @@ async function postTransaction() {
   
   const update = {
     status: status,
-    departuretime: document.getElementById('tr-depart').value,  // lowercase
-    arrivaltime: document.getElementById('tr-arrive').value,    // lowercase
-    tripnotes: document.getElementById('tr-notes').value        // lowercase
+    departuretime: departure,   // ← lowercase, matching database column
+    arrivaltime: arrival,       // ← lowercase, matching database column
+    tripnotes: notes
   };
+  
+  console.log("Sending update:", update); // Debug log
   
   try {
     const res = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches/${tripId}`, { 
@@ -1655,11 +1660,12 @@ async function postTransaction() {
     });
     if(res.ok) {
       toast("Trip report submitted");
+      // Clear form
       document.getElementById('tr-trip-id').value = '';
       document.getElementById('tr-depart').value = '';
       document.getElementById('tr-arrive').value = '';
       document.getElementById('tr-notes').value = '';
-      await loadDispatches();
+      await loadDispatches(); // Refresh the table
     } else {
       const errorText = await res.text();
       console.error("Server error:", errorText);
@@ -1816,32 +1822,30 @@ async function postTransaction() {
 }
 
 function viewTrip(tripId) {
-  console.log('viewTrip called with ID:', tripId);
   const trip = allDispatches.find(t => t.tripid === tripId);
   if (!trip) {
     toast('Trip not found', 'error');
     return;
   }
 
-  // Find client name from waybill
-  const client = allClients.find(c => c.id === trip.waybillId);
+  const client = allClients.find(c => c.id === trip.waybillid);
   const clientName = client ? client.client : '—';
 
   const modalBody = document.getElementById('trip-modal-body');
   modalBody.innerHTML = `
     <div class="trip-detail">
-      <div><strong>Trip ID:</strong> ${trip.tripId}</div>
-      <div><strong>Waybill:</strong> ${trip.waybillId}</div>
+      <div><strong>Trip ID:</strong> ${trip.tripid || '—'}</div>
+      <div><strong>Waybill:</strong> ${trip.waybillid || '—'}</div>
       <div><strong>Client:</strong> ${clientName}</div>
-      <div><strong>Driver:</strong> ${trip.driver}</div>
-      <div><strong>Truck:</strong> ${trip.truck}</div>
+      <div><strong>Driver:</strong> ${trip.driver || '—'}</div>
+      <div><strong>Truck:</strong> ${trip.truck || '—'}</div>
       <div><strong>Route:</strong> ${trip.origin || '?'} → ${trip.destination || '?'}</div>
-      <div><strong>Dispatch Date:</strong> ${trip.date}</div>
+      <div><strong>Dispatch Date:</strong> ${trip.date || '—'}</div>
       <div><strong>Status:</strong> ${getStatusBadge(trip.status)}</div>
       <div><strong>Notes:</strong> ${trip.notes || '—'}</div>
-      <div><strong>Departure Time:</strong> ${trip.departureTime || '—'}</div>
-      <div><strong>Arrival Time:</strong> ${trip.arrivalTime || '—'}</div>
-      <div><strong>Trip Notes:</strong> ${trip.tripNotes || '—'}</div>
+      <div><strong>Departure Time:</strong> ${trip.departuretime || '—'}</div>
+      <div><strong>Arrival Time:</strong> ${trip.arrivaltime || '—'}</div>
+      <div><strong>Trip Notes:</strong> ${trip.tripnotes || '—'}</div>
     </div>
   `;
   document.getElementById('trip-modal').classList.add('open');
