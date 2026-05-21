@@ -1620,7 +1620,7 @@ async function postTransaction() {
 }
   
   async function submitTripReport() {
-    const tripId = document.getElementById('tr-trip-id').value;
+    const tripid = document.getElementById('tr-trip-id').value;
     const status = document.getElementById('tr-status').value;
     if(!tripId) { toast("Select a trip", "error"); return; }
     const update = {
