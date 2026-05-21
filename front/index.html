@@ -1092,14 +1092,12 @@ function getStatusBadge(status) {
   try {
     const response = await fetch(`https://dvrs-trucking-system.onrender.com/api/clients?t=${Date.now()}`);
     const data = await response.json();
-    allClients = data;
-    const sortedClients = [...data].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
-    allClients = sortedClients;
+    allClients = [...data].reverse();
     
     const payResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/payments?t=${Date.now()}`);
     const payments = await payResponse.json();
     allPayments = payments;
-    const sortedPayments = [...payments].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
+    const sortedPayments = [...payments].reverse();
     payments = sortedPayments;
     allPayments = sortedPayments;
     const paidWaybillIds = new Set(payments.map(p => p.waybill));
@@ -1649,9 +1647,9 @@ function populateDispatchWaybillDropdown() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
     const data = await res.json();
-    allDispatches = data;
-    const sortedData = [...data].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
-    
+    const sortedData = [...data].reverse();
+    allDispatches = sortedData;
+
     const table = document.getElementById('dispatch-table');
     const countSpan = document.getElementById('dp-count');
     if(countSpan) countSpan.innerText = data.length;
@@ -1848,8 +1846,8 @@ async function loadMaintenanceRecords() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
     const records = await res.json();
-    allMaintenance = records;
-    const sortedRecords = [...records].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
+    const sortedRecords = [...records].reverse();
+    allMaintenance = sortedRecords;
 
 
     const table = document.getElementById('maintenance-table');
