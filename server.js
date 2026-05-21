@@ -112,11 +112,12 @@ app.get('/api/clients', async (req, res) => {
 
 app.post('/api/clients', async (req, res) => {
   const { id, client, service, date, origin, dest, amount, status, notes, contact } = req.body;
+  const createdAt = new Date().toISOString();
   try {
     await pool.query(
-      `INSERT INTO clients (id, client, service, date, origin, dest, amount, status, notes, contact)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [id, client, service, date, origin, dest, amount, status, notes, contact || '']
+      `INSERT INTO clients (id, client, service, date, origin, dest, amount, status, notes, contact, createdat)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [id, client, service, date, origin, dest, amount, status, notes, contact || '', createdAt]
     );
     res.status(201).json(req.body);
   } catch (err) {
@@ -163,11 +164,12 @@ app.get('/api/payments', async (req, res) => {
 
 app.post('/api/payments', async (req, res) => {
   const { txid, waybill, amount, method, date, remarks, postedby } = req.body;
+  const createdAt = new Date().toISOString();
   try {
     await pool.query(
-      `INSERT INTO payments (txid, waybill, amount, method, date, remarks, postedby)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [txid, waybill, amount, method, date, remarks, postedby]
+      `INSERT INTO payments (txid, waybill, amount, method, date, remarks, postedby, createdat)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [txid, waybill, amount, method, date, remarks, postedby, createdAt]
     );
     res.status(201).json(req.body);
   } catch (err) {
@@ -189,11 +191,12 @@ app.get('/api/dispatches', async (req, res) => {
 
 app.post('/api/dispatches', async (req, res) => {
   const { tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes } = req.body;
+  const createdAt = new Date().toISOString();
   try {
     await pool.query(
-      `INSERT INTO dispatches (tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes]
+      `INSERT INTO dispatches (tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes, createdat)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [tripid, waybillid, driver, truck, origin, destination, date, status, notes, clientname, departuretime, arrivaltime, tripnotes, createdAt]
     );
     res.status(201).json(req.body);
   } catch (err) {
@@ -244,11 +247,12 @@ app.get('/api/maintenance', async (req, res) => {
 
 app.post('/api/maintenance', async (req, res) => {
   const { id, truck, type, reqDate, priority, provider, estCost, description, status, parts, labor, total, completedDate, workDone } = req.body;
+  const createdAt = new Date().toISOString();
   try {
     await pool.query(
-      `INSERT INTO maintenance (id, truck, type, reqdate, priority, provider, estcost, description, status, parts, labor, total, completeddate, workdone)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-      [id, truck, type, reqDate, priority, provider, estCost, description, status, parts || 0, labor || 0, total || 0, completedDate, workDone]
+      `INSERT INTO maintenance (id, truck, type, reqdate, priority, provider, estcost, description, status, parts, labor, total, completeddate, workdone, createdat)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      [id, truck, type, reqDate, priority, provider, estCost, description, status, parts || 0, labor || 0, total || 0, completedDate, workDone, createdAt]
     );
     res.status(201).json(req.body);
   } catch (err) {

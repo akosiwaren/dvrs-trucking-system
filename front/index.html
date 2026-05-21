@@ -1093,10 +1093,15 @@ function getStatusBadge(status) {
     const response = await fetch(`https://dvrs-trucking-system.onrender.com/api/clients?t=${Date.now()}`);
     const data = await response.json();
     allClients = data;
+    const sortedClients = [...data].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
+    allClients = sortedClients;
     
     const payResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/payments?t=${Date.now()}`);
     const payments = await payResponse.json();
     allPayments = payments;
+    const sortedPayments = [...payments].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
+    payments = sortedPayments;
+    allPayments = sortedPayments;
     const paidWaybillIds = new Set(payments.map(p => p.waybill));
     
     const tripsResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches?t=${Date.now()}`);
@@ -1645,6 +1650,7 @@ function populateDispatchWaybillDropdown() {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
     const data = await res.json();
     allDispatches = data;
+    const sortedData = [...data].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
     
     const table = document.getElementById('dispatch-table');
     const countSpan = document.getElementById('dp-count');
@@ -1843,7 +1849,9 @@ async function loadMaintenanceRecords() {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
     const records = await res.json();
     allMaintenance = records;
-    
+    const sortedRecords = [...records].sort((a, b) => new Date(b.createdat) - new Date(a.createdat));
+
+
     const table = document.getElementById('maintenance-table');
     const count = document.getElementById('mt-count');
     if(count) count.innerText = records.length;
