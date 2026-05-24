@@ -1200,7 +1200,7 @@ if (dashTripTable) {
           const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
           const statusClass = isPaid ? 'badge-green' : 'badge-amber';
           return `<tr>
-            <td class="mono"><strong>${req.id}</strong></div>
+            <td class="mono">${req.id}</div>
             <td>${req.client}</div>
             <td>${req.service}</div>
             <td>${req.origin||''} → ${req.dest||''}</div>
