@@ -1133,36 +1133,64 @@ function getStatusBadge(status) {
     const tripsInProgress = dispatches.filter(d => d.status === 'Dispatched').length;
     document.getElementById('dash-trips').innerText = tripsInProgress;
     
-    // Recent client requests table
     const dashTable = document.getElementById('dash-req-table');
     if (dashTable) {
-      const recentClients = [...data].sort((a, b) => {
-        const dateCompare = new Date(b.date) - new Date(a.date);
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(b.createdat) - new Date(a.createdat);
-      }).slice(0, 5);
-      if (data.length === 0) dashTable.innerHTML = '</table><td colspan="3">No requests</div></div>';
-      else {
+      if (data.length === 0) {
+        dashTable.innerHTML = '<tr><td colspan="3" class="empty-state">No requests yet.</td></tr>';
+      } else {
+        // Get 5 most recent clients (sort by date first, then timestamp)
+        const recentClients = [...data].sort((a, b) => {
+          const dateCompare = new Date(b.date) - new Date(a.date);
+          if (dateCompare !== 0) return dateCompare;
+          return new Date(b.createdat) - new Date(a.createdat);
+        }).slice(0, 5);
+        
         let html = '';
-        // Show 5 most recent (already reversed)
-        data.slice(-5).reverse().forEach(req => {
+        recentClients.forEach(req => {
           const isPaid = paidWaybillIds.has(req.id);
-          html += `<tr><td>${req.client}</div><td>${req.service}</div><td><span class="badge ${isPaid ? 'badge-green' : 'badge-amber'}">${isPaid ? 'Paid' : 'Pending'}</span></div></tr>`;
+          const statusText = isPaid ? 'Paid' : (req.status || 'Pending');
+          const statusClass = isPaid ? 'badge-green' : 'badge-amber';
+          
+          html += `
+            <tr>
+              <td style="padding: 9px 10px;">${req.client || req.name || '—'}</div>
+              <td style="padding: 9px 10px;">${req.service || '—'}</div>
+              <td style="padding: 9px 10px;"><span class="badge ${statusClass}">${statusText}</span></div>
+            </td>
+          `;
         });
         dashTable.innerHTML = html;
       }
     }
-    
-    // Active trips table
+        
+// Active trips table
     const dashTripTable = document.getElementById('dash-trip-table');
     if (dashTripTable) {
-      const active = dispatches.filter(d => d.status !== 'Delivered' && d.status !== 'Returned' && d.status !== 'Completed');
-      if (active.length === 0) dashTripTable.innerHTML = '<tr><td colspan="3">No active trips</div></div>';
-      else {
+      // Get active trips (Approved or Dispatched, not Delivered or Returned)
+      const activeTrips = dispatches.filter(d => {
+        const status = d.status;
+        return status === 'Approved' || status === 'Dispatched';
+      });
+      
+      if (activeTrips.length === 0) {
+        dashTripTable.innerHTML = '<tr><td colspan="3" class="empty-state">No active trips.</td></tr>';
+      } else {
+        // Show only the 5 most recent active trips
+        const recentActive = activeTrips.slice(-5).reverse();
         let html = '';
-        active.slice(-5).reverse().forEach(t => {
-          const route = t.destination ? `${t.origin||''} → ${t.destination}` : (t.route||'—');
-          html += `<tr><td>${t.driver||'—'}</div><td>${route}</div><td><span class="badge badge-blue">${t.status||'Dispatched'}</span></div></tr>`;
+        
+        recentActive.forEach(trip => {
+          // Get client name from waybill
+          const client = allClients.find(c => c.id === trip.waybillid);
+          const routeText = trip.destination ? `${trip.origin || '?'} → ${trip.destination}` : (trip.route || '—');
+          
+          html += `
+            <tr>
+              <td style="padding: 9px 10px;">${trip.driver || '—'}</div>
+              <td style="padding: 9px 10px;">${routeText}</div>
+              <td style="padding: 9px 10px;"><span class="badge badge-blue">${trip.status || 'Approved'}</span></div>
+            </tr>
+          `;
         });
         dashTripTable.innerHTML = html;
       }
@@ -1398,24 +1426,40 @@ function viewWaybill(waybillId) {
   
   async function updateDashboardStats() {
     // Maintenance timeline
-    try {
-      const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
-      const records = await maintRes.json();
-
-      const totalCost = records.reduce((s, m) => s + (parseFloat(m.total) || 0), 0);
-
-      document.getElementById('dash-maint').innerText = records.length;
-      const maintList = document.getElementById('dash-maint-list');
-      if (records.length === 0) maintList.innerHTML = '<li class="tl-item">No maintenance records</li>';
-      else {
-        maintList.innerHTML = records.slice(-4).reverse().map(m => {
-          let color = 'var(--gray-400)';
-          if (m.status === 'Completed') color = 'var(--teal)';
-          else if (m.status === 'Scheduled') color = 'var(--amber)';
-          return `<li class="tl-item"><div class="tl-dot" style="background:${color}"></div><div>${m.truck} — ${m.type}<br><small>${fmtDate(m.reqDate)} · ${m.status}</small></div></li>`;
-        }).join('');
-      }
-    } catch(e) { console.error(e); }
+try {
+  const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
+  const records = await maintRes.json();
+  
+  // Update maintenance count
+  const dashMaint = document.getElementById('dash-maint');
+  if (dashMaint) dashMaint.innerText = records.length;
+  
+  const maintList = document.getElementById('dash-maint-list');
+  if (maintList) {
+    if (records.length === 0) {
+      maintList.innerHTML = '<li class="tl-item"><div style="font-size:12px;color:var(--text-tertiary);">No maintenance records yet.</div></li>';
+    } else {
+      const recentMaint = records.slice(-4).reverse();
+      maintList.innerHTML = recentMaint.map((m, i) => {
+        let dotColor = 'var(--gray-400)';
+        if (m.status === 'Completed') dotColor = 'var(--teal)';
+        else if (m.status === 'Scheduled') dotColor = 'var(--amber)';
+        else if (m.priority === 'Critical') dotColor = 'var(--red)';
+        
+        return `
+          <li class="tl-item">
+            <div class="tl-dot" style="background:${dotColor}"></div>
+            ${i < recentMaint.length - 1 ? '<div class="tl-line"></div>' : ''}
+            <div>
+              <div class="tl-text">${m.truck} — ${m.type}</div>
+              <div class="tl-meta">${fmtDate(m.reqdate)} · ${m.status || 'Scheduled'}</div>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+  }
+} catch(e) { console.error(e); }
     
     // Transaction summary on dashboard
     try {
