@@ -1019,6 +1019,13 @@
   let allDispatches = [];
   let allPayments = [];
   let allMaintenance = [];
+  let cachedData = {
+  clients: null,
+  payments: null,
+  dispatches: null,
+  maintenance: null,
+  lastFetch: 0
+};
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -2213,12 +2220,11 @@ async function viewReport(type) {
   const now = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
   
   try {
-    const [clients, payments, dispatches, maintenance] = await Promise.all([
-      fetch('https://dvrs-trucking-system.onrender.com/api/clients').then(r=>r.json()),
-      fetch('https://dvrs-trucking-system.onrender.com/api/payments').then(r=>r.json()),
-      fetch('https://dvrs-trucking-system.onrender.com/api/dispatches').then(r=>r.json()),
-      fetch('https://dvrs-trucking-system.onrender.com/api/maintenance').then(r=>r.json())
-    ]);
+    const data = await getCachedData();
+    const clients = data.clients;
+    const payments = data.payments;
+    const dispatches = data.dispatches;
+    const maintenance = data.maintenance;
     
     const summaryBlock = (stats) => `
   <div style="display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: space-around; align-items: center; gap: 10px; margin: 15px 0; background: var(--gray-50); padding: 10px 15px; border-radius: var(--radius); overflow-x: auto;">
@@ -2333,6 +2339,24 @@ async function viewReport(type) {
   } catch(err) {
     body.innerHTML = `<p>Error: ${err.message}</p>`;
   }
+}
+
+async function getCachedData() {
+  const now = Date.now();
+  // Cache for 30 seconds (adjust as needed)
+  if (cachedData.clients && (now - cachedData.lastFetch) < 30000) {
+    return cachedData;
+  }
+  
+  const [clients, payments, dispatches, maintenance] = await Promise.all([
+    fetch('https://dvrs-trucking-system.onrender.com/api/clients').then(r=>r.json()),
+    fetch('https://dvrs-trucking-system.onrender.com/api/payments').then(r=>r.json()),
+    fetch('https://dvrs-trucking-system.onrender.com/api/dispatches').then(r=>r.json()),
+    fetch('https://dvrs-trucking-system.onrender.com/api/maintenance').then(r=>r.json())
+  ]);
+  
+  cachedData = { clients, payments, dispatches, maintenance, lastFetch: now };
+  return cachedData;
 }
 
 async function viewFilteredReport(type, dateFrom, dateTo) {
