@@ -1164,37 +1164,36 @@ function getStatusBadge(status) {
     }
         
 // Active trips table
-    const dashTripTable = document.getElementById('dash-trip-table');
-    if (dashTripTable) {
-      // Get active trips (Approved or Dispatched, not Delivered or Returned)
-      const activeTrips = dispatches.filter(d => {
-        const status = d.status;
-        return status === 'Approved' || status === 'Dispatched';
-      });
+    // Active trips table on dashboard
+const dashTripTable = document.getElementById('dash-trip-table');
+if (dashTripTable) {
+  // Get active trips (Approved or Dispatched, not Delivered or Returned)
+  const activeTrips = dispatches.filter(d => {
+    const status = d.status;
+    return status === 'Approved' || status === 'Dispatched';
+  });
+  
+  if (activeTrips.length === 0) {
+    dashTripTable.innerHTML = '<tr><td colspan="3" class="empty-state">No active trips.</td></tr>';
+  } else {
+    // Show only the 5 most recent active trips
+    const recentActive = activeTrips.slice(-5).reverse();
+    let html = '';
+    
+    recentActive.forEach(trip => {
+      const routeText = trip.destination ? `${trip.origin || ''} → ${trip.destination}` : (trip.route || '—');
       
-      if (activeTrips.length === 0) {
-        dashTripTable.innerHTML = '<tr><td colspan="3" class="empty-state">No active trips.</td></tr>';
-      } else {
-        // Show only the 5 most recent active trips
-        const recentActive = activeTrips.slice(-5).reverse();
-        let html = '';
-        
-        recentActive.forEach(trip => {
-          // Get client name from waybill
-          const client = allClients.find(c => c.id === trip.waybillid);
-          const routeText = trip.destination ? `${trip.origin || '?'} → ${trip.destination}` : (trip.route || '—');
-          
-          html += `
-            <tr>
-              <td style="padding: 9px 10px;">${trip.driver || '—'}</div>
-              <td style="padding: 9px 10px;">${routeText}</div>
-              <td style="padding: 9px 10px;"><span class="badge badge-blue">${trip.status || 'Approved'}</span></div>
-            </tr>
-          `;
-        });
-        dashTripTable.innerHTML = html;
-      }
-    }
+      html += `
+        <tr>
+          <td style="padding: 9px 10px;">${trip.driver || '—'}</div>
+          <td style="padding: 9px 10px;">${routeText}</div>
+          <td style="padding: 9px 10px;"><span class="badge badge-blue">${trip.status || 'Approved'}</span></div>
+        </tr>
+      `;
+    });
+    dashTripTable.innerHTML = html;
+  }
+}
     
     // All client requests table - newest first (already reversed)
     const clientTable = document.getElementById('clients-table');
@@ -1424,56 +1423,70 @@ function viewWaybill(waybillId) {
     document.getElementById('waybill-modal').classList.remove('open');
   }
   
-  async function updateDashboardStats() {
-    // Maintenance timeline
-try {
-  const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
-  const records = await maintRes.json();
-  
-  // Update maintenance count
-  const dashMaint = document.getElementById('dash-maint');
-  if (dashMaint) dashMaint.innerText = records.length;
-  
-  const maintList = document.getElementById('dash-maint-list');
-  if (maintList) {
-    if (records.length === 0) {
-      maintList.innerHTML = '<li class="tl-item"><div style="font-size:12px;color:var(--text-tertiary);">No maintenance records yet.</div></li>';
-    } else {
-      const recentMaint = records.slice(-4).reverse();
-      maintList.innerHTML = recentMaint.map((m, i) => {
-        let dotColor = 'var(--gray-400)';
-        if (m.status === 'Completed') dotColor = 'var(--teal)';
-        else if (m.status === 'Scheduled') dotColor = 'var(--amber)';
-        else if (m.priority === 'Critical') dotColor = 'var(--red)';
-        
-        return `
-          <li class="tl-item">
-            <div class="tl-dot" style="background:${dotColor}"></div>
-            ${i < recentMaint.length - 1 ? '<div class="tl-line"></div>' : ''}
-            <div>
-              <div class="tl-text">${m.truck} — ${m.type}</div>
-              <div class="tl-meta">${fmtDate(m.reqdate)} · ${m.status || 'Scheduled'}</div>
-            </div>
-          </li>
-        `;
-      }).join('');
-    }
-  }
-} catch(e) { console.error(e); }
+async function updateDashboardStats() {
+  // Maintenance timeline
+  try {
+    const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
+    const records = await maintRes.json();
     
-    // Transaction summary on dashboard
-    try {
-      const [clients, payments] = await Promise.all([
-        fetch('https://dvrs-trucking-system.onrender.com/api/clients').then(r=>r.json()),
-        fetch('https://dvrs-trucking-system.onrender.com/api/payments').then(r=>r.json())
-      ]);
-      const totalCollected = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
-      const totalValue = clients.reduce((s,c)=>s+parseFloat(c.amount||0),0);
-      document.getElementById('dash-collected').innerText = fmt(totalCollected);
-      document.getElementById('dash-outstanding').innerText = fmt(totalValue - totalCollected);
-      document.getElementById('dash-tx-summary').innerText = `${payments.length} transactions · ${clients.length} waybills`;
-    } catch(e) {}
+    // Update maintenance count in stats card
+    const dashMaint = document.getElementById('dash-maint');
+    if (dashMaint) dashMaint.innerText = records.length;
+    
+    const maintList = document.getElementById('dash-maint-list');
+    if (maintList) {
+      if (records.length === 0) {
+        maintList.innerHTML = '<li class="tl-item"><div style="font-size:12px;color:var(--text-tertiary);">No maintenance records yet.</div></li>';
+      } else {
+        // Get 4 most recent records
+        const recentMaint = records.slice(-4).reverse();
+        let html = '';
+        
+        recentMaint.forEach((m, i) => {
+          let dotColor = 'var(--gray-400)';
+          if (m.status === 'Completed') dotColor = 'var(--teal)';
+          else if (m.status === 'Scheduled') dotColor = 'var(--amber)';
+          else if (m.priority === 'Critical') dotColor = 'var(--red)';
+          
+          html += `
+            <li class="tl-item">
+              <div class="tl-dot" style="background:${dotColor}"></div>
+              ${i < recentMaint.length - 1 ? '<div class="tl-line"></div>' : ''}
+              <div>
+                <div class="tl-text">${m.truck || '—'} — ${m.type || '—'}</div>
+                <div class="tl-meta">${fmtDate(m.reqdate)} · ${m.status || 'Scheduled'}</div>
+              </div>
+            </li>
+          `;
+        });
+        
+        maintList.innerHTML = html;
+      }
+    }
+  } catch(e) { 
+    console.error("Maintenance dashboard error:", e);
+    const maintList = document.getElementById('dash-maint-list');
+    if (maintList) maintList.innerHTML = '<li class="tl-item"><div style="font-size:12px;color:var(--text-tertiary);">Error loading records.</div></li>';
   }
+  
+  // Transaction summary on dashboard
+  try {
+    const [clients, payments] = await Promise.all([
+      fetch('https://dvrs-trucking-system.onrender.com/api/clients').then(r=>r.json()),
+      fetch('https://dvrs-trucking-system.onrender.com/api/payments').then(r=>r.json())
+    ]);
+    const totalCollected = payments.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+    const totalValue = clients.reduce((s,c)=>s+parseFloat(c.amount||0),0);
+    const dashCollected = document.getElementById('dash-collected');
+    const dashOutstanding = document.getElementById('dash-outstanding');
+    const dashTxSummary = document.getElementById('dash-tx-summary');
+    if (dashCollected) dashCollected.innerText = fmt(totalCollected);
+    if (dashOutstanding) dashOutstanding.innerText = fmt(totalValue - totalCollected);
+    if (dashTxSummary) dashTxSummary.innerText = `${payments.length} transactions · ${clients.length} waybills`;
+  } catch(e) {
+    console.error("Transaction summary dashboard error:", e);
+  }
+}
   <!-- updated -->
   async function refreshAllData() {
     await syncWithBackend();
