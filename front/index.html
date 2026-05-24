@@ -1165,31 +1165,24 @@ function getStatusBadge(status) {
         
 // Active trips table
     // Active trips table on dashboard
+// Active trips table on dashboard
 const dashTripTable = document.getElementById('dash-trip-table');
 if (dashTripTable) {
-  // Get active trips (Approved or Dispatched, not Delivered or Returned)
-  const activeTrips = dispatches.filter(d => {
-    const status = d.status;
-    return status === 'Approved' || status === 'Dispatched';
-  });
+  const activeTrips = dispatches.filter(d => d.status === 'Approved' || d.status === 'Dispatched');
   
   if (activeTrips.length === 0) {
-    dashTripTable.innerHTML = '<tr><td colspan="3" class="empty-state">No active trips.</td></tr>';
+    dashTripTable.innerHTML = '<tr><td colspan="3">No active trips</div></div>';
   } else {
-    // Show only the 5 most recent active trips
-    const recentActive = activeTrips.slice(-5).reverse();
-    let html = '';
+    const recentActive = activeTrips.sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(b.createdat) - new Date(a.createdat);
+    }).slice(0, 5);
     
+    let html = '';
     recentActive.forEach(trip => {
       const routeText = trip.destination ? `${trip.origin || ''} → ${trip.destination}` : (trip.route || '—');
-      
-      html += `
-        <tr>
-          <td style="padding: 9px 10px;">${trip.driver || '—'}</div>
-          <td style="padding: 9px 10px;">${routeText}</div>
-          <td style="padding: 9px 10px;"><span class="badge badge-blue">${trip.status || 'Approved'}</span></div>
-        </tr>
-      `;
+      html += `<tr><td>${trip.driver || '—'}</td><td>${routeText}</td><td><span class="badge badge-blue">${trip.status || 'Approved'}</span></td></tr>`;
     });
     dashTripTable.innerHTML = html;
   }
@@ -1429,16 +1422,14 @@ async function updateDashboardStats() {
     const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
     const records = await maintRes.json();
     
-    // Update maintenance count in stats card
     const dashMaint = document.getElementById('dash-maint');
     if (dashMaint) dashMaint.innerText = records.length;
     
     const maintList = document.getElementById('dash-maint-list');
     if (maintList) {
       if (records.length === 0) {
-        maintList.innerHTML = '<li class="tl-item"><div style="font-size:12px;color:var(--text-tertiary);">No maintenance records yet.</div></li>';
+        maintList.innerHTML = '<li class="tl-item">No maintenance records yet.</li>';
       } else {
-        // Get 4 most recent records
         const recentMaint = records.slice(-4).reverse();
         let html = '';
         
@@ -1448,16 +1439,7 @@ async function updateDashboardStats() {
           else if (m.status === 'Scheduled') dotColor = 'var(--amber)';
           else if (m.priority === 'Critical') dotColor = 'var(--red)';
           
-          html += `
-            <li class="tl-item">
-              <div class="tl-dot" style="background:${dotColor}"></div>
-              ${i < recentMaint.length - 1 ? '<div class="tl-line"></div>' : ''}
-              <div>
-                <div class="tl-text">${m.truck || '—'} — ${m.type || '—'}</div>
-                <div class="tl-meta">${fmtDate(m.reqdate)} · ${m.status || 'Scheduled'}</div>
-              </div>
-            </li>
-          `;
+          html += `<li class="tl-item"><span class="tl-dot" style="background:${dotColor}"></span>${i < recentMaint.length - 1 ? '<span class="tl-line"></span>' : ''}<span class="tl-text">${m.truck || '—'} — ${m.type || '—'}</span><span class="tl-meta">${fmtDate(m.reqdate)} · ${m.status || 'Scheduled'}</span></li>`;
         });
         
         maintList.innerHTML = html;
@@ -1466,7 +1448,7 @@ async function updateDashboardStats() {
   } catch(e) { 
     console.error("Maintenance dashboard error:", e);
     const maintList = document.getElementById('dash-maint-list');
-    if (maintList) maintList.innerHTML = '<li class="tl-item"><div style="font-size:12px;color:var(--text-tertiary);">Error loading records.</div></li>';
+    if (maintList) maintList.innerHTML = '<li class="tl-item">Error loading records.</li>';
   }
   
   // Transaction summary on dashboard
@@ -2261,7 +2243,6 @@ async function viewReport(type) {
       <hr>
     </div>`;
     let footer = `<div class="report-footer"><hr><small>DVRS Trucking Services – Management System</small></div>`;
-    const approved = dispatches.filter(d => d.status === 'Approved').length;
 
     if (type === 'combined-trip-dispatch') {
       titleEl.textContent = 'Trip & Dispatch Summary';
