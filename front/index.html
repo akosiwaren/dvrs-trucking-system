@@ -1130,7 +1130,7 @@ function getStatusBadge(status) {
     document.getElementById('dash-clients').innerText = data.length;
     const pendingCount = data.filter(c => !paidWaybillIds.has(c.id)).length;
     document.getElementById('dash-pending').innerText = pendingCount;
-    const tripsInProgress = dispatches.filter(d => d.status === 'Dispatched').length;
+    const tripsInProgress = dispatches.filter(d => d.status === 'Approved' || d.status === 'Dispatched').length;
     document.getElementById('dash-trips').innerText = tripsInProgress;
     
     const dashTable = document.getElementById('dash-req-table');
@@ -1418,38 +1418,33 @@ function viewWaybill(waybillId) {
   
 async function updateDashboardStats() {
   // Maintenance timeline
-  try {
-    const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
-    const records = await maintRes.json();
-    
-    const dashMaint = document.getElementById('dash-maint');
-    if (dashMaint) dashMaint.innerText = records.length;
-    
-    const maintList = document.getElementById('dash-maint-list');
-    if (maintList) {
-      if (records.length === 0) {
-        maintList.innerHTML = '<li class="tl-item">No maintenance records yet.</li>';
-      } else {
-        const recentMaint = records.slice(-4).reverse();
-        let html = '';
-        
-        recentMaint.forEach((m, i) => {
-          let dotColor = 'var(--gray-400)';
-          if (m.status === 'Completed') dotColor = 'var(--teal)';
-          else if (m.status === 'Scheduled') dotColor = 'var(--amber)';
-          else if (m.priority === 'Critical') dotColor = 'var(--red)';
-          
-          html += `<li class="tl-item"><span class="tl-dot" style="background:${dotColor}"></span>${i < recentMaint.length - 1 ? '<span class="tl-line"></span>' : ''}<span class="tl-text">${m.truck || '—'} — ${m.type || '—'}</span><span class="tl-meta">${fmtDate(m.reqdate)} · ${m.status || 'Scheduled'}</span></li>`;
-        });
-        
-        maintList.innerHTML = html;
-      }
+try {
+  const maintRes = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
+  const records = await maintRes.json();
+  
+  const dashMaint = document.getElementById('dash-maint');
+  if (dashMaint) dashMaint.innerText = records.length;
+  
+  const maintList = document.getElementById('dash-maint-list');
+  if (maintList) {
+    if (records.length === 0) {
+      maintList.innerHTML = '<li class="tl-item">No maintenance records yet.</li>';
+    } else {
+      // Sort by createdat (newest first) to show recent records
+      const recentMaint = [...records].sort((a, b) => {
+        const dateCompare = new Date(b.reqdate) - new Date(a.reqdate);
+        if (dateCompare !== 0) return dateCompare;
+        return new Date(b.createdat) - new Date(a.createdat);
+      }).slice(0, 4);
+      
+      let html = '';
+      recentMaint.forEach((m) => {
+        html += `<li class="tl-item">${m.truck || '—'} — ${m.type || '—'} (${fmtDate(m.reqdate)} - ${m.status || 'Scheduled'})</li>`;
+      });
+      maintList.innerHTML = html;
     }
-  } catch(e) { 
-    console.error("Maintenance dashboard error:", e);
-    const maintList = document.getElementById('dash-maint-list');
-    if (maintList) maintList.innerHTML = '<li class="tl-item">Error loading records.</li>';
   }
+} catch(e) { console.error(e); }
   
   // Transaction summary on dashboard
   try {
