@@ -1106,13 +1106,20 @@ function getStatusBadge(status) {
   try {
     const response = await fetch(`https://dvrs-trucking-system.onrender.com/api/clients?t=${Date.now()}`);
     const data = await response.json();
-    // Reverse to show newest first (most recent records at top)
-    allClients = [...data].reverse();
+    allClients = [...data].sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(b.createdat) - new Date(a.createdat);
+    });
     
     const payResponse = await fetch(`https://dvrs-trucking-system.onrender.com/api/payments?t=${Date.now()}`);
     const payments = await payResponse.json();
     // Reverse to show newest first
-    const sortedPayments = [...payments].reverse();
+    const sortedPayments = [...payments].sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(b.createdat) - new Date(a.createdat);
+    });
     allPayments = sortedPayments;
     const paidWaybillIds = new Set(sortedPayments.map(p => p.waybill));
     
@@ -1129,6 +1136,11 @@ function getStatusBadge(status) {
     // Recent client requests table
     const dashTable = document.getElementById('dash-req-table');
     if (dashTable) {
+      const recentClients = [...data].sort((a, b) => {
+        const dateCompare = new Date(b.date) - new Date(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        return new Date(b.createdat) - new Date(a.createdat);
+      }).slice(0, 5);
       if (data.length === 0) dashTable.innerHTML = '</table><td colspan="3">No requests</div></div>';
       else {
         let html = '';
@@ -1657,7 +1669,11 @@ function populateDispatchWaybillDropdown() {
   try {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/dispatches');
     const data = await res.json();
-    const sortedData = [...data].reverse();
+    const sortedData = [...data].sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(b.createdat) - new Date(a.createdat);
+    });
     allDispatches = sortedData;
 
     const table = document.getElementById('dispatch-table');
@@ -1879,7 +1895,11 @@ async function loadMaintenanceRecords() {
     const res = await fetch('https://dvrs-trucking-system.onrender.com/api/maintenance');
     const records = await res.json();
     // Reverse to show newest first
-    const sortedRecords = [...records].reverse();
+    const sortedRecords = [...records].sort((a, b) => {
+      const dateCompare = new Date(b.reqdate) - new Date(a.reqdate);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(b.createdat) - new Date(a.createdat);
+    });
     allMaintenance = sortedRecords;
 
     const table = document.getElementById('maintenance-table');
@@ -2184,7 +2204,8 @@ async function viewReport(type) {
       <hr>
     </div>`;
     let footer = `<div class="report-footer"><hr><small>DVRS Trucking Services – Management System</small></div>`;
-    
+    const approved = dispatches.filter(d => d.status === 'Approved').length;
+
     if (type === 'combined-trip-dispatch') {
       titleEl.textContent = 'Trip & Dispatch Summary';
       const dispatched = dispatches.filter(d => d.status === 'Dispatched').length;
@@ -2282,14 +2303,12 @@ async function viewReport(type) {
 }
 
 async function viewFilteredReport(type, dateFrom, dateTo) {
-  // Open the modal
   document.getElementById('report-modal').classList.add('open');
   const body = document.getElementById('modal-body');
   const titleEl = document.getElementById('modal-title-text');
   const now = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
 
   try {
-    // Fetch fresh data
     const [clientsRes, paymentsRes, dispatchesRes, maintenanceRes] = await Promise.all([
       fetch('https://dvrs-trucking-system.onrender.com/api/clients'),
       fetch('https://dvrs-trucking-system.onrender.com/api/payments'),
@@ -2302,27 +2321,24 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
     let dispatches = await dispatchesRes.json();
     let maintenance = await maintenanceRes.json();
 
-    // Apply date filters if both are provided
     if (dateFrom && dateTo) {
       payments = payments.filter(p => p.date >= dateFrom && p.date <= dateTo);
       dispatches = dispatches.filter(d => d.date >= dateFrom && d.date <= dateTo);
       maintenance = maintenance.filter(m => {
-        const recordDate = m.completedDate || m.reqDate;
+        const recordDate = m.completeddate || m.reqdate;
         return recordDate >= dateFrom && recordDate <= dateTo;
       });
     }
 
     const revenue = payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
-    const maintCost = maintenance.reduce((s, m) => s + (m.total || 0), 0);
+    const maintCost = maintenance.reduce((s, m) => s + (parseFloat(m.total) || 0), 0);
     const netProfit = revenue - maintCost;
 
-    // Helper: summary row (same as in viewReport)
     const summaryBlock = (stats) => `
-  <div style="display: flex; flex-wrap: nowrap; justify-content: space-around; gap: 20px; margin: 15px 0; background: var(--gray-50); padding: 10px; border-radius: var(--radius); overflow-x: auto;">
-    ${stats.map(s => `<div style="text-align: center; flex: 1; min-width: 70px;"><div style="font-size: 11px; color: var(--text-tertiary);">${s.label}</div><div style="font-size: 20px; font-weight: 600; color: var(--text);">${s.value}</div></div>`).join('')}
-  </div>
-`;
-
+      <div style="display: flex; flex-wrap: nowrap; justify-content: space-around; gap: 20px; margin: 15px 0; background: var(--gray-50); padding: 10px; border-radius: var(--radius); overflow-x: auto;">
+        ${stats.map(s => `<div style="text-align: center; flex: 1; min-width: 70px;"><div style="font-size: 11px; color: var(--text-tertiary);">${s.label}</div><div style="font-size: 20px; font-weight: 600; color: var(--text);">${s.value}</div></div>`).join('')}
+      </div>
+    `;
 
     let content = '';
     let header = `<div class="report-header">
@@ -2337,19 +2353,20 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
       const dispatched = dispatches.filter(d => d.status === 'Dispatched').length;
       const delivered = dispatches.filter(d => d.status === 'Delivered').length;
       const returned = dispatches.filter(d => d.status === 'Returned').length;
+      const approved = dispatches.filter(d => d.status === 'Approved').length;  // ← ADD THIS LINE
       const stats = [
-  { label: 'Total Trips', value: dispatches.length },
-  { label: 'Approved', value: approved },
-  { label: 'Dispatched', value: dispatched },
-  { label: 'Delivered', value: delivered },
-  { label: 'Returned', value: returned }
-];
+        { label: 'Total Trips', value: dispatches.length },
+        { label: 'Approved', value: approved },
+        { label: 'Dispatched', value: dispatched },
+        { label: 'Delivered', value: delivered },
+        { label: 'Returned', value: returned }
+      ];
       content = `<h2>Trip & Dispatch Summary</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
           <thead><tr><th>Trip ID</th><th>Driver</th><th>Truck</th><th>Route</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            ${dispatches.map(d => `<tr><td class="mono">${d.tripId || d.id}</div><td>${d.driver}</div><td>${d.truck}</div><td>${d.origin || ''} → ${d.destination || ''}</div><td>${d.date}</div><td>${d.status}</div></tr>`).join('')}
+            ${dispatches.map(d => `<tr><td class="mono">${d.tripid || d.id}</div><td>${d.driver}</div><td>${d.truck}</div><td>${d.origin || ''} → ${d.destination || ''}</div><td>${d.date}</div><td>${d.status}</div></tr>`).join('')}
           </tbody>
         </table>`;
     }
@@ -2366,14 +2383,14 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
           <tbody>
             ${payments.map(p => {
               const c = clients.find(cl => cl.id === p.waybill);
-              return `<tr><td class="mono">${p.txId}</div><td class="mono">${p.waybill}</div><td>${c ? c.client : '—'}</div><td>${fmt(p.amount)}</div><td>${p.method}</div><td>${p.date}</div></tr>`;
+              return `<tr><td class="mono">${p.txid || p.txId}</div><td class="mono">${p.waybill}</div><td>${c ? c.client : '—'}</div><td>${fmt(p.amount)}</div><td>${p.method}</div><td>${p.date}</div></tr>`;
             }).join('')}
           </tbody>
         </table>`;
     }
     else if (type === 'maintenance-report') {
       titleEl.textContent = 'Maintenance Cost Report';
-      const totalCost = maintenance.reduce((s, m) => s + (m.total || 0), 0);
+      const totalCost = maintenance.reduce((s, m) => s + (parseFloat(m.total) || 0), 0);
       const stats = [
         { label: 'Total Records', value: maintenance.length },
         { label: 'Total Cost', value: fmt(totalCost) }
@@ -2381,9 +2398,9 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
       content = `<h2>Maintenance Cost Report</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
-          <thead><td><th>Ref #</th><th>Truck</th><th>Type</th><th>Parts</th><th>Labor</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
+          <thead><tr><th>Ref #</th><th>Truck</th><th>Type</th><th>Parts</th><th>Labor</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            ${maintenance.map(m => `<td><td class="mono">${m.id}</div><td>${m.truck}</div><td>${m.type}</div><td>${fmt(m.parts)}</div><td>${fmt(m.labor)}</div><td>${fmt(m.total)}</div><td>${fmtDate(m.completedDate || m.reqDate)}</div><td>${m.status}</div></tr>`).join('')}
+            ${maintenance.map(m => `<tr><td class="mono">${m.id}</div><td>${m.truck}</div><td>${m.type}</div><td>${fmt(m.parts)}</div><td>${fmt(m.labor)}</div><td>${fmt(m.total)}</div><td>${fmtDate(m.completeddate || m.reqdate)}</div><td>${m.status}</div><tr>`).join('')}
           </tbody>
         </table>`;
     }
