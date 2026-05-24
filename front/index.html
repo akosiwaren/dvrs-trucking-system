@@ -715,55 +715,30 @@
           </div>
 
           <div class="card">
-  <div class="card-title">Driver Trip Report Submission</div>
-  <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:12px;">Driver submits trip report after completing delivery. Data flows into D2 Trip Records.</div>
-  <div class="form-row">
-    <div class="form-group">
-      <div class="form-label">Trip ID *</div>
-      <select class="form-select" id="tr-trip-id">
-        <option value="">— select trip —</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <div class="form-label">Trip Status *</div>
-      <select class="form-select" id="tr-status">
-        <option value="Approved" disabled selected>Approved</option>
-        <option value="Delivered">Delivered</option>
-        <option value="Returned">Returned</option>
-      </select>
-    </div>
-  </div>
-  <div class="form-row">
-    <div class="form-group">
-      <div class="form-label">Departure Time</div>
-      <div style="display: flex; gap: 8px;">
-        <input type="time" id="tr-depart" style="flex: 2;">
-        <select id="tr-depart-ampm" style="flex: 1;">
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <div class="form-label">Arrival Time</div>
-      <div style="display: flex; gap: 8px;">
-        <input type="time" id="tr-arrive" style="flex: 2;">
-        <select id="tr-arrive-ampm" style="flex: 1;">
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
-      </div>
-    </div>
-  </div>
-  <div class="form-group" style="margin-bottom:12px;">
-    <div class="form-label">Trip Notes / Issues Encountered</div>
-    <textarea id="tr-notes" placeholder="Delays, road conditions, incidents, recipient confirmed..."></textarea>
-  </div>
-  <div class="form-actions">
-    <button class="btn btn-teal" onclick="submitTripReport()">Submit Trip Report</button>
-    <button class="btn" onclick="clearTripForm()">Clear</button>
-  </div>
-</div>
+            <div class="card-title">Driver Trip Report Submission</div>
+            <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:12px;">Driver submits trip report after completing delivery. Data flows into D2 Trip Records.</div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-label">Trip ID *</div>
+                <select class="form-select" id="tr-trip-id"><option value="">— select trip —</option></select>
+              </div>
+              <div class="form-group"><div class="form-label">Trip Status *</div>
+                <select class="form-select" id="tr-status"><option value="Approved" disabled selected>Approved</option><option value="Delivered">Delivered</option><option value="Returned">Returned</option></select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-label">Departure Time</div><input type="time" id="tr-depart"></div>
+              <div class="form-group"><div class="form-label">Arrival Time</div><input type="time" id="tr-arrive"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <div class="form-label">Trip Notes / Issues Encountered</div>
+              <textarea id="tr-notes" placeholder="Delays, road conditions, incidents, recipient confirmed..."></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-teal" onclick="submitTripReport()">Submit Trip Report</button>
+              <button class="btn" onclick="clearTripForm()">Clear</button>
+            </div>
+          </div>
+        </div>
 
         <div class="card">
           <div class="card-title">D2 — Trip Records <span id="dp-count" class="badge badge-gray">0</span></div>
@@ -1877,13 +1852,8 @@ function updateStatusDropdown() {
   const tripSelect = document.getElementById('tr-trip-id');
   const tripId = tripSelect.value;
   const status = document.getElementById('tr-status').value;
-  
-  // Combine time with AM/PM
-  let departure = document.getElementById('tr-depart').value;
-  let departureAmpm = document.getElementById('tr-depart-ampm').value;
-  let arrival = document.getElementById('tr-arrive').value;
-  let arrivalAmpm = document.getElementById('tr-arrive-ampm').value;
-  
+  const departure = document.getElementById('tr-depart').value;
+  const arrival = document.getElementById('tr-arrive').value;
   const notes = document.getElementById('tr-notes').value;
   
   if(!tripId) { 
@@ -1891,31 +1861,36 @@ function updateStatusDropdown() {
     return; 
   }
   
-  // Format time with AM/PM (e.g., "02:30 PM")
-  const formattedDeparture = departure ? `${departure} ${departureAmpm}` : '';
-  const formattedArrival = arrival ? `${arrival} ${arrivalAmpm}` : '';
-  
+  // Find the current trip data to preserve existing values
   const currentTrip = allDispatches.find(t => t.tripid === tripId);
   
-  const update = { status: status };
+  // Build update object – only include fields that have values, otherwise keep existing
+  const update = {
+    status: status
+  };
   
-  if (formattedDeparture) {
-    update.departuretime = formattedDeparture;
+  // Only update departure if provided, otherwise keep existing
+  if (departure) {
+    update.departuretime = departure;
   } else if (currentTrip && currentTrip.departuretime) {
     update.departuretime = currentTrip.departuretime;
   }
   
-  if (formattedArrival) {
-    update.arrivaltime = formattedArrival;
+  // Only update arrival if provided, otherwise keep existing
+  if (arrival) {
+    update.arrivaltime = arrival;
   } else if (currentTrip && currentTrip.arrivaltime) {
     update.arrivaltime = currentTrip.arrivaltime;
   }
   
+  // Only update notes if provided, otherwise keep existing
   if (notes) {
     update.tripnotes = notes;
   } else if (currentTrip && currentTrip.tripnotes) {
     update.tripnotes = currentTrip.tripnotes;
   }
+  
+  console.log("Submitting update:", update);
   
   try {
     const res = await fetch(`https://dvrs-trucking-system.onrender.com/api/dispatches/${tripId}`, { 
@@ -1923,29 +1898,28 @@ function updateStatusDropdown() {
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify(update) 
     });
+    
     if(res.ok) {
       toast("Trip report submitted");
       document.getElementById('tr-trip-id').value = '';
       document.getElementById('tr-depart').value = '';
       document.getElementById('tr-arrive').value = '';
       document.getElementById('tr-notes').value = '';
-      document.getElementById('tr-depart-ampm').value = 'AM';
-      document.getElementById('tr-arrive-ampm').value = 'AM';
       await loadDispatches();
     } else {
       toast("Failed to submit", "error");
     }
-  } catch(e) { toast("Error", "error"); }
+  } catch(e) { 
+    toast("Error", "error"); 
+  }
 }
   
-function clearTripForm() {
-  document.getElementById('tr-trip-id').value = '';
-  document.getElementById('tr-depart').value = '';
-  document.getElementById('tr-arrive').value = '';
-  document.getElementById('tr-notes').value = '';
-  document.getElementById('tr-depart-ampm').value = 'AM';
-  document.getElementById('tr-arrive-ampm').value = 'AM';
-}
+  function clearTripForm() {
+    document.getElementById('tr-trip-id').value = '';
+    document.getElementById('tr-depart').value = '';
+    document.getElementById('tr-arrive').value = '';
+    document.getElementById('tr-notes').value = '';
+  }
   
   // ============================================================
   // MAINTENANCE
@@ -2195,12 +2169,16 @@ function toggleOtherIssueType() {
 }
 
 function viewTrip(tripId) {
+  console.log('Looking for trip:', tripId);
+  
+  // Find the trip by tripid
   const trip = allDispatches.find(t => t.tripid === tripId);
   if (!trip) {
     toast('Trip not found', 'error');
     return;
   }
 
+  // Find client using waybillid
   const client = allClients.find(c => c.id === trip.waybillid);
   const clientName = client ? client.client : '—';
 
