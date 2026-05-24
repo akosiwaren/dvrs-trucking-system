@@ -2267,7 +2267,7 @@ async function viewReport(type) {
         <table class="report-table">
           <thead><tr><th>Trip ID</th><th>Client</th><th>Driver</th><th>Truck</th><th>Route</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            ${dispatches.map(d => {
+            ${sortedDispatches.map(d => {
               const client = clients.find(c => c.id === d.waybillid);
               const clientName = client ? client.client : '—';
               return `<tr><td class="mono">${d.tripid || 'N/A'}</div><td>${clientName}</div><td>${d.driver || ''}</div><td>${d.truck || ''}</div><td>${d.origin || ''} → ${d.destination || ''}</div><td>${d.date || ''}</div><td>${d.status || ''}</div></tr>`;
@@ -2292,7 +2292,7 @@ async function viewReport(type) {
         <table class="report-table">
           <thead><tr><th>Tx ID</th><th>Waybill</th><th>Client</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
           <tbody>
-            ${payments.map(p => {
+            ${sortedPayments.map(p => {
               const c = clients.find(cl => cl.id === p.waybill);
               return `<tr><td class="mono">${p.txid || p.txId || 'N/A'}</div><td class="mono">${p.waybill || ''}</div><td>${c ? c.client : '—'}</div><td>${fmt(p.amount)}</div><td>${p.method || ''}</div><td>${p.date || ''}</div></tr>`;
             }).join('')}
@@ -2316,7 +2316,7 @@ async function viewReport(type) {
         <table class="report-table">
           <thead><tr><th>Ref #</th><th>Truck</th><th>Type</th><th>Parts</th><th>Labor</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            ${maintenance.map(m => {
+            ${sortedMaintenance.map(m => {
               const displayDate = m.completeddate ? fmtDate(m.completeddate) : (m.reqdate ? fmtDate(m.reqdate) : '—');
               return `<tr><td class="mono">${m.id || 'N/A'}</div><td>${m.truck || ''}</div><td>${m.type || ''}</div><td>${fmt(m.parts)}</div><td>${fmt(m.labor)}</div><td>${fmt(parseFloat(m.total) || 0)}</div><td>${displayDate}</div><td>${m.status || ''}</div></tr>`;
             }).join('')}
@@ -2453,7 +2453,7 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
         <table class="report-table">
           <thead><tr><th>Tx ID</th><th>Waybill</th><th>Client</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
           <tbody>
-            ${payments.map(p => {
+            ${sortedPayments.map(p => {
               const c = clients.find(cl => cl.id === p.waybill);
               return `<tr><td class="mono">${p.txid || p.txId}</div><td class="mono">${p.waybill}</div><td>${c ? c.client : '—'}</div><td>${fmt(p.amount)}</div><td>${p.method}</div><td>${p.date}</div></tr>`;
             }).join('')}
