@@ -2258,6 +2258,9 @@ async function viewReport(type) {
         { label: 'Delivered', value: delivered },
         { label: 'Returned', value: returned }
       ];
+
+      const sortedDispatches = [...dispatches].sort((a, b) => new Date(b.date) - new Date(a.date));
+
       html = `${header}
         <h2>Trip & Dispatch Summary</h2>
         ${summaryBlock(stats)}
@@ -2280,6 +2283,9 @@ async function viewReport(type) {
         { label: 'Total Transactions', value: payments.length },
         { label: 'Total Collected', value: fmt(revenue) }
       ];
+
+      const sortedPayments = [...payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+
       html = `${header}
         <h2>Client Transaction Log</h2>
         ${summaryBlock(stats)}
@@ -2301,6 +2307,9 @@ async function viewReport(type) {
         { label: 'Total Records', value: maintenance.length },
         { label: 'Total Cost', value: fmt(totalCost) }
       ];
+
+      const sortedMaintenance = [...maintenance].sort((a, b) => new Date(b.reqdate) - new Date(a.reqdate));
+
       html = `${header}
         <h2>Maintenance Cost Report</h2>
         ${summaryBlock(stats)}
@@ -2418,6 +2427,9 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
         { label: 'Delivered', value: delivered },
         { label: 'Returned', value: returned }
       ];
+
+      const sortedDispatches = [...dispatches].sort((a, b) => new Date(b.date) - new Date(a.date));
+
       content = `<h2>Trip & Dispatch Summary</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
@@ -2433,6 +2445,9 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
         { label: 'Total Transactions', value: payments.length },
         { label: 'Total Collected', value: fmt(revenue) }
       ];
+
+      const sortedPayments = [...payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+
       content = `<h2>Client Transaction Log</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
@@ -2452,6 +2467,9 @@ async function viewFilteredReport(type, dateFrom, dateTo) {
         { label: 'Total Records', value: maintenance.length },
         { label: 'Total Cost', value: fmt(totalCost) }
       ];
+
+      const sortedMaintenance = [...maintenance].sort((a, b) => new Date(b.reqdate) - new Date(a.reqdate));
+
       content = `<h2>Maintenance Cost Report</h2>
         ${summaryBlock(stats)}
         <table class="report-table">
